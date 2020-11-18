@@ -1,0 +1,8 @@
+resources:
+- operator_autoscaler.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: operator-autoscaler
+  newName: rzetelskik/scylla-operator-autoscaler
+  newTag: latest

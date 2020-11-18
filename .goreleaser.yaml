@@ -1,0 +1,26 @@
+builds:
+  -
+    binary: scylla-operator-autoscaler
+    main: ./pkg/cmd
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X "main.goVersion={{.Env.GOVERSION}}"
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+dockers:
+  - image_templates:
+      - 'rzetelskik/scylla-operator-autoscaler:latest'
+    binaries:
+      - scylla-operator-autoscaler
+    skip_push: auto
+    dockerfile: Dockerfile
+    extra_files:
+      - go.mod
+      - go.sum
+      - pkg
