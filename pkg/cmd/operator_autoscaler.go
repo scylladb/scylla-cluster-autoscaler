@@ -29,19 +29,6 @@ func newOperatorAutoscalerCmd(ctx context.Context, logger log.Logger, level zap.
 			for {
 				time.Sleep(30 * time.Second)
 
-				// 1. List Cluster resources
-
-				//clusterList := &scyllav1alpha1.ClusterList{}
-				//
-				//err = c.List(ctx, clusterList, client.InNamespace("scylla"))
-				//if err != nil {
-				//	logger.Error(ctx, "failed to list clusters in namespace scylla", "error", err)
-				//	continue
-				//}
-				//
-				//logger.Info(ctx, "scylla cluster list:", "list", clusterList.Items)
-
-				// 2. Update number of members in cluster
 				cluster := &scyllav1alpha1.Cluster{}
 				err = c.Get(ctx, client.ObjectKey{
 					Namespace: "scylla",
