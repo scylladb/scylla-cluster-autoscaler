@@ -15,7 +15,7 @@ builds:
 
 dockers:
   - image_templates:
-      - 'rzetelskik/scylla-operator-autoscaler:latest'
+      - '${IMG}'
     binaries:
       - scylla-operator-autoscaler
     skip_push: auto
