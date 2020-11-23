@@ -1,14 +1,17 @@
 # Image URL to use all building/pushing image targets
-REPO	?= rzetelskik/scylla-operator-autoscaler
+REPO		?= rzetelskik/scylla-operator-autoscaler
 TAG		?= $(shell git describe --tags --always --abbrev=0)
 IMG		?= $(REPO):latest
 
 .EXPORT_ALL_VARIABLES:
-DOCKER_BUILDKIT		:= 1
+DOCKER_BUILDKIT			:= 1
 GOVERSION			:= $(shell go version)
 GOPATH				:= $(shell go env GOPATH)
-KUBEBUILDER_ASSETS	:= $(GOPATH)/bin
+KUBEBUILDER_ASSETS		:= $(GOPATH)/bin
 PATH				:= $(GOPATH)/bin:$(PATH):
+
+.PHONY: default
+default: docker-build docker-push deploy
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: fmt vet
