@@ -13,6 +13,10 @@ PATH				:= $(GOPATH)/bin:$(PATH):
 .PHONY: default
 default: docker-build docker-push deploy
 
+# Run tests
+test: fmt vet
+	go test ./pkg/... -coverprofile cover.out
+
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: fmt vet
 	go run ./pkg/cmd operator-autoscaler
