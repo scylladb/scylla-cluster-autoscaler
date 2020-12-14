@@ -1,0 +1,7 @@
+apiVersion: scylla.scylladb.com/v1alpha1
+kind: ScyllaClusterAutoscaler
+metadata:
+  name: scyllaclusterautoscaler-sample
+spec:
+  updatePolicy:
+    updateMode: "Auto"

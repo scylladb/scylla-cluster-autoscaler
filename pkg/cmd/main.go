@@ -8,6 +8,10 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
+	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -15,7 +19,11 @@ var (
 )
 
 func init() {
+	_ = clientgoscheme.AddToScheme(scheme)
+
 	_ = scyllav1alpha1.AddToScheme(scheme)
+	_ = v1alpha1.AddToScheme(scheme)
+	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
