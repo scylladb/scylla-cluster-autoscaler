@@ -1,0 +1,7 @@
+domain: scylla.scylladb.com
+repo: github.com/scylladb/scylla-operator-autoscaler
+resources:
+- group: scylla
+  kind: ScyllaClusterAutoscaler
+  version: v1alpha1
+version: "2"
