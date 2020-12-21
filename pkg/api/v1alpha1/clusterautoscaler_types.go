@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	autoscaling "k8s.io/api/autoscaling/v1"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -46,7 +47,7 @@ type ScyllaClusterAutoscaler struct {
 
 // ScyllaClusterAutoscalerSpec defines the desired state of ScyllaClusterAutoscaler
 type ScyllaClusterAutoscalerSpec struct {
-	Selector *metav1.LabelSelector `json:"selector"`
+	TargetRef *autoscaling.CrossVersionObjectReference `json:"targetRef"`
 
 	// +optional
 	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
