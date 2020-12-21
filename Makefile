@@ -1,9 +1,9 @@
-# Image URL to use all building/pushing image targets
-REPO        ?= rzetelskik/scylla-operator-autoscaler
-TAG		    ?= $(shell git describe --tags --always --abbrev=0)
-IMG		    ?= $(REPO):latest
+REPO        		?= rzetelskik
+TAG		    		?= $(shell git describe --tags --always --abbrev=0)
+IMG_PREFIX		    ?= scylla-operator-autoscaler-
+
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS         ?= "crd:trivialVersions=true"
 
 .EXPORT_ALL_VARIABLES:
 DOCKER_BUILDKIT         := 1
@@ -11,17 +11,19 @@ GOVERSION               := $(shell go version)
 GOPATH                  := $(shell go env GOPATH)
 KUBEBUILDER_ASSETS      := $(GOPATH)/bin
 PATH                    := $(GOPATH)/bin:$(PATH):
+RECOMMENDER_IMG         := $(REPO)/$(IMG_PREFIX)recommender
+
 
 .PHONY: default
 default: docker-build docker-push deploy
 
 # Run tests
 test: fmt vet
-	go test ./pkg/... -coverprofile cover.out
+	go test ./... -coverprofile cover.out
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: fmt vet
-	go run ./pkg/cmd operator-autoscaler
+	go run ./cmd operator-autoscaler
 
 # Install CRDs into a cluster
 install: manifests
@@ -33,7 +35,7 @@ uninstall: manifests
 
 # Deploy operator_autoscaler in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests
-	cd config/operator_autoscaler && kustomize edit set image operator-autoscaler=${IMG}
+	cd config/recommender && kustomize edit set image recommender=$(RECOMMENDER_IMG)
 	kustomize build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
@@ -42,22 +44,21 @@ manifests:
 
 # Run go fmt against code
 fmt:
-	go fmt ./pkg/...
+	go fmt ./...
 
 # Run go vet against code
 vet:
-	go vet ./pkg/...
+	go vet ./...
 
 # Build the docker image
 docker-build: fmt vet
-	export IMG='$(IMG)'
-	envsubst < .goreleaser.yaml > .subst.goreleaser.yaml
-	goreleaser -f .subst.goreleaser.yaml --skip-validate --skip-publish --rm-dist --snapshot
-	rm -f .subst.goreleaser.yaml
+	envsubst < .goreleaser.yml > .subst.goreleaser.yml
+	goreleaser -f .subst.goreleaser.yml --skip-validate --skip-publish --rm-dist --snapshot
+	rm -f .subst.goreleaser.yml
 
 # Push the docker image
 docker-push:
-	docker push ${IMG}
+	docker push ${RECOMMENDER_IMG}
 
 # Generate code
 generate:
