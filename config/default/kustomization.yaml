@@ -2,6 +2,6 @@ namespace: scylla-operator-autoscaler-system
 namePrefix: scylla-operator-autoscaler-
 
 bases:
-  - ../operator_autoscaler
+  - ../recommender
   - ../rbac
   - ../crd
