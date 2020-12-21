@@ -17,9 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	autoscaling "k8s.io/api/autoscaling/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	autoscaling "k8s.io/api/autoscaling/v1"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -39,7 +39,7 @@ type ScyllaClusterAutoscaler struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ScyllaClusterAutoscalerSpec   `json:"spec,omitempty"`
+	Spec ScyllaClusterAutoscalerSpec `json:"spec,omitempty"`
 
 	// +optional
 	Status ScyllaClusterAutoscalerStatus `json:"status,omitempty"`

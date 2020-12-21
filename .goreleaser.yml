@@ -1,11 +1,15 @@
+before:
+  hooks:
+    - go mod download
+env:
+  - CGO_ENABLED=0
 builds:
   -
-    binary: scylla-operator-autoscaler
-    main: ./pkg/cmd
+    id: recommender
+    binary: recommender
+    main: ./cmd/recommender
     flags:
       - -trimpath
-    env:
-      - CGO_ENABLED=0
     ldflags:
       - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X "main.goVersion={{.Env.GOVERSION}}"
     goos:
@@ -15,12 +19,11 @@ builds:
 
 dockers:
   - image_templates:
-      - '${IMG}'
+      - '${RECOMMENDER_IMG}:latest'
+      - '${RECOMMENDER_IMG}:{{ .Tag }}'
+    builds:
+      - recommender
     binaries:
-      - scylla-operator-autoscaler
+      - recommender
     skip_push: auto
-    dockerfile: Dockerfile
-    extra_files:
-      - go.mod
-      - go.sum
-      - pkg
+    dockerfile: cmd/recommender/Dockerfile

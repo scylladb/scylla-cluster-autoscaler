@@ -2,34 +2,34 @@ apiVersion: v1
 kind: Namespace
 metadata:
   labels:
-    control-plane: manager
+    control-plane: recommender
   name: system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: manager
+  name: recommender
   namespace: system
   labels:
-    control-plane: manager
+    control-plane: recommender
 spec:
   selector:
     matchLabels:
-      control-plane: manager
+      control-plane: recommender
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: manager
+        control-plane: recommender
     spec:
       containers:
         - command:
-            - /scylla-operator-autoscaler
+            - /recommender
           args:
             - operator-autoscaler
-          image: operator-autoscaler:latest
+          image: recommender:latest
           imagePullPolicy: Always
-          name: manager
+          name: recommender
           resources:
             limits:
               cpu: 100m
