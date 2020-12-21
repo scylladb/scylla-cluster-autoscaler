@@ -59,3 +59,7 @@ docker-build: fmt vet
 # Push the docker image
 docker-push:
 	docker push ${RECOMMENDER_IMG}
+
+# Generate code
+generate:
+	controller-gen object:headerFile="hack/boilerplate.go.txt" paths="$(PKG)"
