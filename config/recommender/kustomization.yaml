@@ -1,0 +1,10 @@
+resources:
+- recommender.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: recommender
+  newName: rzetelskik/scylla-operator-autoscaler-recommender
+- name: scylla-operator-autoscaler-recommender
+  newName: rzetelskik/scylla-operator-autoscaler-recommender
+  newTag: latest
