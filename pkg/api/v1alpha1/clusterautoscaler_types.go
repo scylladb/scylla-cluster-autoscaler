@@ -20,6 +20,7 @@ import (
 	autoscaling "k8s.io/api/autoscaling/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	autoscaling "k8s.io/api/autoscaling/v1"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
