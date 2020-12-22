@@ -21,10 +21,6 @@ default: docker-build docker-push deploy
 test: fmt vet
 	go test ./... -coverprofile cover.out
 
-# Run against the configured Kubernetes cluster in ~/.kube/config
-run: fmt vet
-	go run ./cmd operator-autoscaler
-
 # Install CRDs into a cluster
 install: manifests
 	kustomize build config/crd | kubectl apply -f -
