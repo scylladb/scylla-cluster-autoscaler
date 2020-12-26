@@ -3,5 +3,8 @@ kind: ScyllaClusterAutoscaler
 metadata:
   name: scyllaclusterautoscaler-sample
 spec:
+  targetRef:
+    namespace: scylla
+    name: simple-cluster
   updatePolicy:
     updateMode: "Auto"

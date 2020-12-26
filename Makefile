@@ -30,13 +30,13 @@ uninstall: manifests
 	kustomize build config/crd | kubectl delete -f -
 
 # Deploy operator_autoscaler in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests
+deploy:
 	cd config/recommender && kustomize edit set image recommender=$(RECOMMENDER_IMG)
 	kustomize build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
-	controller-gen $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	controller-gen $(CRD_OPTIONS) webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code
 fmt:
