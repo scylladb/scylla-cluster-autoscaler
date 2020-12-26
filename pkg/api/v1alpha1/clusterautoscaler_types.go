@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	autoscaling "k8s.io/api/autoscaling/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,13 +46,19 @@ type ScyllaClusterAutoscaler struct {
 
 // ScyllaClusterAutoscalerSpec defines the desired state of ScyllaClusterAutoscaler
 type ScyllaClusterAutoscalerSpec struct {
-	TargetRef *autoscaling.CrossVersionObjectReference `json:"targetRef"`
+	TargetRef *TargetRef `json:"targetRef"`
 
 	// +optional
 	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
 
 	// +optional
 	ScalingPolicy *ScalingPolicy `json:"scalingPolicy,omitempty"`
+}
+
+type TargetRef struct {
+	Namespace string `json:"namespace"`
+
+	Name string `json:"name"`
 }
 
 type UpdatePolicy struct {
@@ -116,6 +121,7 @@ type ScyllaClusterRecommendations struct {
 
 type DataCenterRecommendations struct {
 	Name string `json:"name"`
+
 	// +optional
 	RackRecommendations []RackRecommendations `json:"rackRecommendations,omitempty"`
 }
@@ -123,13 +129,15 @@ type DataCenterRecommendations struct {
 type RackRecommendations struct {
 	Name string `json:"name"`
 
+	// +optional
 	Members *RecommendedRackMembers `json:"members,omitempty"`
 
+	// +optional
 	Resources *RecommendedRackResources `json:"resources,omitempty"`
 }
 
 type RecommendedRackMembers struct {
-	Target int `json:"target,omitempty"`
+	Target int32 `json:"target,omitempty"`
 }
 
 type RecommendedRackResources struct {

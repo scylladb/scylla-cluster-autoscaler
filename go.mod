@@ -3,6 +3,8 @@ module github.com/scylladb/scylla-operator-autoscaler
 go 1.15
 
 require (
+	github.com/prometheus/client_golang v1.0.0
+	github.com/prometheus/common v0.4.1
 	github.com/scylladb/go-log v0.0.4
 	github.com/scylladb/scylla-operator v0.3.0
 	github.com/spf13/cobra v0.0.5
