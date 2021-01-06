@@ -33,7 +33,6 @@ uninstall: manifests
 # Deploy operator_autoscaler in the configured Kubernetes cluster in ~/.kube/config
 deploy:
 	cd config/recommender && kustomize edit set image recommender=$(RECOMMENDER_IMG)
-	kustomize build config/default | kubectl apply -f -
 	cd config/updater && kustomize edit set image updater=$(UPDATER_IMG)
 	kustomize build config/default | kubectl apply -f -
 

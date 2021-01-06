@@ -140,7 +140,7 @@ func newUpdaterCmd(ctx context.Context, logger log.Logger, level zap.AtomicLevel
 								"cluster", cluster.Name, "error", err)
 						}
 
-						logger.Debug(ctx, "rack updated", "rack", rackRec.Name)
+						logger.Info(ctx, "rack updated", "rack", rackRec.Name)
 					}
 				}
 			}
