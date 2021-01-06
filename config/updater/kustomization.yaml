@@ -1,0 +1,10 @@
+resources:
+- updater.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: scylla-operator-autoscaler-updater
+  newName: mmazurczyk/scylla-operator-autoscaler-updater
+  newTag: latest
+- name: updater
+  newName: mmazurczyk/scylla-operator-autoscaler-updater

@@ -3,6 +3,7 @@ namePrefix: scylla-operator-autoscaler-
 
 resources:
   - ../recommender
+  - ../updater
   - ../rbac
   - ../crd
 
