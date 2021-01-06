@@ -117,7 +117,7 @@ func newRecommenderCmd(ctx context.Context, logger log.Logger, level zap.AtomicL
 					}
 
 					recommendations.DataCenterRecommendations = append(recommendations.DataCenterRecommendations,
-						v1alpha1.DataCenterRecommendations{Name: cluster.Name, RackRecommendations: rackRecommendations})
+						v1alpha1.DataCenterRecommendations{Name: cluster.Spec.Datacenter.Name, RackRecommendations: rackRecommendations})
 
 					str, err := json.Marshal(recommendations)
 					if err != nil {

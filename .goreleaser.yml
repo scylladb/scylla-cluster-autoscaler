@@ -17,6 +17,19 @@ builds:
     goarch:
       - amd64
 
+  -
+    id: updater
+    binary: updater
+    main: ./cmd/updater
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X "main.goVersion={{.Env.GOVERSION}}"
+    goos:
+      - linux
+    goarch:
+      - amd64
+
 dockers:
   - image_templates:
       - '${RECOMMENDER_IMG}:latest'
@@ -27,3 +40,13 @@ dockers:
       - recommender
     skip_push: auto
     dockerfile: cmd/recommender/Dockerfile
+
+  - image_templates:
+      - '${UPDATER_IMG}:latest'
+      - '${UPDATER_IMG}:{{ .Tag }}'
+    builds:
+      - updater
+    binaries:
+      - updater
+    skip_push: auto
+    dockerfile: cmd/updater/Dockerfile

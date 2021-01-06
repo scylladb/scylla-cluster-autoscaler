@@ -1,4 +1,4 @@
-REPO        		?= rzetelskik
+REPO        		?= mmazurczyk
 TAG		    		?= $(shell git describe --tags --always --abbrev=0)
 IMG_PREFIX		    ?= scylla-operator-autoscaler-
 
@@ -12,6 +12,7 @@ GOPATH                  := $(shell go env GOPATH)
 KUBEBUILDER_ASSETS      := $(GOPATH)/bin
 PATH                    := $(GOPATH)/bin:$(PATH):
 RECOMMENDER_IMG         := $(REPO)/$(IMG_PREFIX)recommender
+UPDATER_IMG         := $(REPO)/$(IMG_PREFIX)updater
 
 
 .PHONY: default
@@ -32,6 +33,8 @@ uninstall: manifests
 # Deploy operator_autoscaler in the configured Kubernetes cluster in ~/.kube/config
 deploy:
 	cd config/recommender && kustomize edit set image recommender=$(RECOMMENDER_IMG)
+	kustomize build config/default | kubectl apply -f -
+	cd config/updater && kustomize edit set image updater=$(UPDATER_IMG)
 	kustomize build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
@@ -55,3 +58,4 @@ docker-build: fmt vet
 # Push the docker image
 docker-push:
 	docker push ${RECOMMENDER_IMG}
+	docker push ${UPDATER_IMG}
