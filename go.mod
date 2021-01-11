@@ -6,8 +6,8 @@ require (
 	github.com/prometheus/client_golang v1.0.0
 	github.com/prometheus/common v0.4.1
 	github.com/scylladb/go-log v0.0.4
-	github.com/scylladb/scylla-operator v0.3.0
-	github.com/spf13/cobra v0.0.5
+	github.com/scylladb/scylla-operator v1.0.0
+	github.com/spf13/cobra v1.0.0
 	go.uber.org/zap v1.14.0
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6

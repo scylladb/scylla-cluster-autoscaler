@@ -87,8 +87,6 @@ spec:
               type: object
             targetRef:
               properties:
-                apiVersion:
-                  type: string
                 name:
                   type: string
                 namespace:

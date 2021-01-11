@@ -6,7 +6,7 @@ rules:
 - apiGroups:
     - scylla.scylladb.com
   resources:
-    - clusters
+    - scyllaclusters
   verbs:
     - get
     - list

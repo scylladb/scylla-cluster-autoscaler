@@ -2,6 +2,7 @@ namespace: scylla-operator-autoscaler-system
 namePrefix: scylla-operator-autoscaler-
 
 resources:
+  - namespace.yaml
   - ../recommender
   - ../updater
   - ../rbac

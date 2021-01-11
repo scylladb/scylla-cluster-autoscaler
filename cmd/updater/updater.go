@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/scylladb/go-log"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
-	scyllav1alpha1 "github.com/scylladb/scylla-operator/pkg/api/v1alpha1"
+	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"os"
@@ -45,7 +45,7 @@ func getRackRecommendations(dataCenterName string,
 	return nil
 }
 
-func findRack(rackName string, racks []scyllav1alpha1.RackSpec) *scyllav1alpha1.RackSpec {
+func findRack(rackName string, racks []scyllav1.RackSpec) *scyllav1.RackSpec {
 	for idx := range racks {
 		if rackName == racks[idx].Name {
 			return &racks[idx]
@@ -88,7 +88,7 @@ func newUpdaterCmd(ctx context.Context, logger log.Logger, level zap.AtomicLevel
 
 					targetRef := sca.Spec.TargetRef
 
-					cluster := &scyllav1alpha1.Cluster{}
+					cluster := &scyllav1.ScyllaCluster{}
 					err = c.Get(ctx, client.ObjectKey{
 						Namespace: targetRef.Namespace,
 						Name:      targetRef.Name,
