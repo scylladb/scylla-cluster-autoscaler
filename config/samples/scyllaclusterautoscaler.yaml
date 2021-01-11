@@ -1,7 +1,7 @@
 apiVersion: scylla.scylladb.com/v1alpha1
 kind: ScyllaClusterAutoscaler
 metadata:
-  name: scyllaclusterautoscaler-sample
+  name: sca-sample
 spec:
   targetRef:
     namespace: scylla

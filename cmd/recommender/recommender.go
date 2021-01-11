@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/scylladb/go-log"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
-	scyllav1alpha1 "github.com/scylladb/scylla-operator/pkg/api/v1alpha1"
+	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"os"
@@ -54,7 +54,7 @@ func newRecommenderCmd(ctx context.Context, logger log.Logger, level zap.AtomicL
 					sca := &scas.Items[idx]
 					targetRef := sca.Spec.TargetRef
 
-					cluster := &scyllav1alpha1.Cluster{}
+					cluster := &scyllav1.ScyllaCluster{}
 					err = c.Get(ctx, client.ObjectKey{
 						Namespace: targetRef.Namespace,
 						Name:      targetRef.Name,
