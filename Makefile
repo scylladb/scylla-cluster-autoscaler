@@ -1,4 +1,4 @@
-REPO        		?= rzetelskik
+REPO        		?= cezarybednarz
 TAG		    		?= $(shell git describe --tags --always --abbrev=0)
 IMG_PREFIX		    ?= scylla-operator-autoscaler-
 
