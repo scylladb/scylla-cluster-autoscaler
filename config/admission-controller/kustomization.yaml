@@ -1,0 +1,7 @@
+resources:
+- admission_controller.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: admission-controller
+  newName: rzetelskik/scylla-operator-autoscaler-admission-controller

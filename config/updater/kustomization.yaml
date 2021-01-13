@@ -7,4 +7,4 @@ images:
   newName: mmazurczyk/scylla-operator-autoscaler-updater
   newTag: latest
 - name: updater
-  newName: mmazurczyk/scylla-operator-autoscaler-updater
+  newName: rzetelskik/scylla-operator-autoscaler-updater

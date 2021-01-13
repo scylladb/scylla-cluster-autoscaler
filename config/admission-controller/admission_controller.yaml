@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-controller
+  namespace: system
+  labels:
+    control-plane: admission-controller
+spec:
+  selector:
+    matchLabels:
+      control-plane: admission-controller
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: admission-controller
+    spec:
+      containers:
+        - command:
+            - /admission-controller
+          args:
+            - admission-controller
+          image: admission-controller:latest
+          imagePullPolicy: Always
+          name: admission-controller
+          resources:
+            limits:
+              cpu: 30m
+              memory: 30Mi
+            requests:
+              cpu: 20m
+              memory: 20Mi
+      terminationGracePeriodSeconds: 10

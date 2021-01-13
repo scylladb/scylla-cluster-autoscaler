@@ -1,4 +1,4 @@
-REPO        		?= mmazurczyk
+REPO        		?= rzetelskik
 TAG		    		?= $(shell git describe --tags --always --abbrev=0)
 IMG_PREFIX		    ?= scylla-operator-autoscaler-
 
@@ -6,13 +6,14 @@ IMG_PREFIX		    ?= scylla-operator-autoscaler-
 CRD_OPTIONS         ?= "crd:trivialVersions=true"
 
 .EXPORT_ALL_VARIABLES:
-DOCKER_BUILDKIT         := 1
-GOVERSION               := $(shell go version)
-GOPATH                  := $(shell go env GOPATH)
-KUBEBUILDER_ASSETS      := $(GOPATH)/bin
-PATH                    := $(GOPATH)/bin:$(PATH):
-RECOMMENDER_IMG         := $(REPO)/$(IMG_PREFIX)recommender
-UPDATER_IMG         := $(REPO)/$(IMG_PREFIX)updater
+DOCKER_BUILDKIT        		 	:= 1
+GOVERSION               		:= $(shell go version)
+GOPATH                  		:= $(shell go env GOPATH)
+KUBEBUILDER_ASSETS      		:= $(GOPATH)/bin
+PATH                    		:= $(GOPATH)/bin:$(PATH):
+RECOMMENDER_IMG         		:= $(REPO)/$(IMG_PREFIX)recommender
+UPDATER_IMG       	    		:= $(REPO)/$(IMG_PREFIX)updater
+ADMISSION_CONTROLLER_IMG  	    := $(REPO)/$(IMG_PREFIX)admission-controller
 
 
 .PHONY: default
@@ -34,6 +35,7 @@ uninstall: manifests
 deploy:
 	cd config/recommender && kustomize edit set image recommender=$(RECOMMENDER_IMG)
 	cd config/updater && kustomize edit set image updater=$(UPDATER_IMG)
+	cd config/admission-controller && kustomize edit set image admission-controller=$(ADMISSION_CONTROLLER_IMG)
 	kustomize build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
@@ -58,3 +60,4 @@ docker-build: fmt vet
 docker-push:
 	docker push ${RECOMMENDER_IMG}
 	docker push ${UPDATER_IMG}
+	docker push ${ADMISSION_CONTROLLER_IMG}

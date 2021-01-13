@@ -16,7 +16,6 @@ builds:
       - linux
     goarch:
       - amd64
-
   -
     id: updater
     binary: updater
@@ -29,7 +28,18 @@ builds:
       - linux
     goarch:
       - amd64
-
+  -
+    id: admission-controller
+    binary: admission-controller
+    main: ./cmd/admission-controller
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X "main.goVersion={{.Env.GOVERSION}}"
+    goos:
+      - linux
+    goarch:
+      - amd64
 dockers:
   - image_templates:
       - '${RECOMMENDER_IMG}:latest'
@@ -40,7 +50,6 @@ dockers:
       - recommender
     skip_push: auto
     dockerfile: cmd/recommender/Dockerfile
-
   - image_templates:
       - '${UPDATER_IMG}:latest'
       - '${UPDATER_IMG}:{{ .Tag }}'
@@ -50,3 +59,12 @@ dockers:
       - updater
     skip_push: auto
     dockerfile: cmd/updater/Dockerfile
+  - image_templates:
+      - '${ADMISSION_CONTROLLER_IMG}:latest'
+      - '${ADMISSION_CONTROLLER_IMG}:{{ .Tag }}'
+    builds:
+      - admission-controller
+    binaries:
+      - admission-controller
+    skip_push: auto
+    dockerfile: cmd/admission-controller/Dockerfile
