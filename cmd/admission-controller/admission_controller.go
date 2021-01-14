@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
-	"net/http"
+	"os"
 
 	"github.com/scylladb/go-log"
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 const (
@@ -22,31 +26,28 @@ func newAdmissionControllerCmd(ctx context.Context, logger log.Logger) *cobra.Co
 		Short: "Start the admission controller",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			logger.Info(ctx, "Admission controller initiated")
+			logger.Info(ctx, "Initiating Admission Controller")
 
-			mux := http.NewServeMux()
-			mux.Handle(mutatePath, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				logger.Info(ctx, "Received request")
-				for name, headers := range r.Header {
-					for _, h := range headers {
-						logger.Info(ctx, "Request", "name", name, "header", h)
-					}
-				}
-			}))
-
-			logger.Info(ctx, "Mux initiated")
-
-			server := &http.Server{
-				Addr:    mutatePort,
-				Handler: mux,
+			// Setup a Manager
+			logger.Info(ctx, "Setting up manager")
+			mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+			if err != nil {
+				logger.Error(ctx, "Unable to set up overall controller manager", err)
+				os.Exit(1)
 			}
 
-			logger.Info(ctx, "Starting listening to", "path", mutatePath)
+			// Setup webhooks
+			logger.Info(ctx, "Setting up webhook server")
+			webhookServer := mgr.GetWebhookServer()
 
-			err := server.ListenAndServeTLS(tlsCert, tlsKey)
+			logger.Info(ctx, "Registering webhooks to the webhook server")
+			webhookServer.Register(mutatePath, &webhook.Admission{Handler: &recommendationApplier{Client: mgr.GetClient(), logger: logger}})
 
-			logger.Error(ctx, "Server crashed", "error", err)
-
+			logger.Info(ctx, "Starting manager")
+			if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+				logger.Error(ctx, "Unable to run manager", err)
+				os.Exit(1)
+			}
 		},
 	}
 
