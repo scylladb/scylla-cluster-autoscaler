@@ -60,38 +60,45 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 
 	c, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
 	if err != nil {
-		return fmt.Errorf("failed to create a client: %s", err)
+		return fmt.Errorf("Failed to create a client: %s", err)
 	}
 
 	scas := &v1alpha1.ScyllaClusterAutoscalerList{}
 	err = c.List(ctx, scas)
 	if err != nil {
-		return fmt.Errorf("failed to get SCAs: %s", err)
+		return fmt.Errorf("Failed to get SCAs: %s", err)
 	}
 
 	logger.Debug(ctx, "SCAs fetched", "num", len(scas.Items))
 
+	mutated := false
+
 	for idx := range scas.Items {
 		sca := &scas.Items[idx]
 
+		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
+			logger.Debug(ctx, "Cluster has 'off' scaling policy, skipping")
+			continue
+		}
+
 		dcRecs := getDataCenterRecommendations(sca)
 		if dcRecs == nil {
-			logger.Debug(ctx, "no recommendations for cluster", "cluster", cluster.Name)
+			logger.Debug(ctx, "No recommendations for cluster", "cluster", cluster.Name)
 			continue
 		}
 
 		dataCenterName := cluster.Spec.Datacenter.Name
 
 		if cluster.Spec.Datacenter.Name != dataCenterName {
-			logger.Debug(ctx, "data center name does not match")
+			logger.Debug(ctx, "Data center name does not match")
 			continue
 		}
 
-		logger.Info(ctx, "found data center with name", "data center", dataCenterName)
+		logger.Info(ctx, "Found data center with name", "data center", dataCenterName)
 
 		rackRecs := getRackRecommendations(dataCenterName, dcRecs)
 		if rackRecs == nil {
-			logger.Debug(ctx, "no recommendations for data center", "data center", dataCenterName)
+			logger.Debug(ctx, "No recommendations for data center", "data center", dataCenterName)
 			continue
 		}
 
@@ -99,29 +106,33 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 			rackRec := &rackRecs[j]
 
 			if rackRec.Members == nil {
-				logger.Debug(ctx, "no members recommendation for rack", "rack", rackRec.Name)
+				logger.Debug(ctx, "No members recommendation for rack", "rack", rackRec.Name)
 				continue
 			}
 
 			rack := findRack(rackRec.Name, cluster.Spec.Datacenter.Racks)
 			if rack == nil {
-				logger.Debug(ctx, "could not find rack matching recommendation",
-					"rack", rackRec.Name)
+				logger.Debug(ctx, "Could not find rack matching recommendation", "rack", rackRec.Name)
 				continue
 			}
 
 			if rackRec.Name != rack.Name {
-				logger.Debug(ctx, "rack name does not match")
+				logger.Debug(ctx, "Rack name does not match")
 				continue
 			}
 
+			mutated = true
 			rack.Members = rackRec.Members.Target
 
-			logger.Info(ctx, "rack updated", "rack", rackRec.Name)
+			logger.Info(ctx, "Rack updated", "rack", rackRec.Name)
 		}
 	}
 
-	logger.Info(ctx, "cluster properly mutated")
+	if mutated {
+		logger.Info(ctx, "Cluster creation request overriden with recommendations")
+	} else {
+		logger.Info(ctx, "No recommendations available, cluster is not administered by autoscaler or update policy is set to 'Off'")
+	}
 
 	return nil
 }
