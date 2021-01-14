@@ -12,13 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-const (
-	caMountPath = "/tmp/k8s-webhook-server/serving-certs/"
-	tlsCert     = caMountPath + "tls.crt"
-	tlsKey      = caMountPath + "tls.key"
-	mutatePath  = "/mutate-scylla-scylladb-com-v1-scyllacluster"
-)
-
 func newAdmissionControllerCmd(ctx context.Context, logger log.Logger) *cobra.Command {
 	admissionControllerCmd := &cobra.Command{
 		Use:   "admission-controller",
@@ -27,7 +20,7 @@ func newAdmissionControllerCmd(ctx context.Context, logger log.Logger) *cobra.Co
 
 			logger.Info(ctx, "Initiating Admission Controller")
 
-			// Setup a Manager
+			// setup a Manager
 			logger.Info(ctx, "Setting up manager")
 			mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 			if err != nil {
@@ -35,12 +28,12 @@ func newAdmissionControllerCmd(ctx context.Context, logger log.Logger) *cobra.Co
 				os.Exit(1)
 			}
 
-			// Setup webhooks
+			// setup webhooks
 			logger.Info(ctx, "Setting up webhook server")
 			webhookServer := mgr.GetWebhookServer()
 
 			logger.Info(ctx, "Registering webhooks to the webhook server")
-			webhookServer.Register(mutatePath, &webhook.Admission{Handler: &recommendationApplier{Client: mgr.GetClient(), logger: logger}})
+			webhookServer.Register("/mutate-scylla-scylladb-com-v1-scyllacluster", &webhook.Admission{Handler: &recommendationApplier{Client: mgr.GetClient(), logger: logger}})
 
 			logger.Info(ctx, "Starting manager")
 			if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
