@@ -71,15 +71,15 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 
 	logger.Debug(ctx, "SCAs fetched", "num", len(scas.Items))
 
-	mutated := false
-
 	for idx := range scas.Items {
 		sca := &scas.Items[idx]
 
 		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
-			logger.Debug(ctx, "Cluster has 'off' scaling policy, skipping")
+			logger.Debug(ctx, "Autoscaler has 'off' scaling policy, skipping", "autoscaler", sca.ObjectMeta.Name)
 			continue
 		}
+
+		logger.Debug(ctx, "Cluster has 'Initial' or 'Auto' scaling policy")
 
 		dcRecs := getDataCenterRecommendations(sca)
 		if dcRecs == nil {
@@ -121,17 +121,10 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 				continue
 			}
 
-			mutated = true
 			rack.Members = rackRec.Members.Target
 
 			logger.Info(ctx, "Rack updated", "rack", rackRec.Name)
 		}
-	}
-
-	if mutated {
-		logger.Info(ctx, "Cluster creation request overriden with recommendations")
-	} else {
-		logger.Info(ctx, "No recommendations available, cluster is not administered by autoscaler or update policy is set to 'Off'")
 	}
 
 	return nil
