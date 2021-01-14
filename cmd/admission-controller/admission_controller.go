@@ -17,7 +17,6 @@ const (
 	tlsCert     = caMountPath + "tls.crt"
 	tlsKey      = caMountPath + "tls.key"
 	mutatePath  = "/mutate-scylla-scylladb-com-v1-scyllacluster"
-	mutatePort  = ":443"
 )
 
 func newAdmissionControllerCmd(ctx context.Context, logger log.Logger) *cobra.Command {
