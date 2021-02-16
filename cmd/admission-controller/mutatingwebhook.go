@@ -135,8 +135,7 @@ func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Reque
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	err = mutateCluster(ctx, ra.logger, cluster)
-	if err != nil {
+	if err := mutateCluster(ctx, ra.logger, cluster); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
