@@ -37,9 +37,6 @@ func getRackRecommendations(dataCenterName string,
 	dcRecs []v1alpha1.DataCenterRecommendations) []v1alpha1.RackRecommendations {
 	for idx := range dcRecs {
 		if dcRecs[idx].Name == dataCenterName {
-			if dcRecs[idx].RackRecommendations == nil {
-				return nil
-			}
 			return dcRecs[idx].RackRecommendations
 		}
 	}
