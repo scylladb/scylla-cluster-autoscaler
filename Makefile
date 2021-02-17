@@ -1,4 +1,4 @@
-REPO        		?= cezarybednarz
+REPO        		?= scyllazimnx
 TAG		    		?= $(shell git describe --tags --always --abbrev=0)
 IMG_PREFIX		    ?= scylla-operator-autoscaler-
 
@@ -6,7 +6,6 @@ IMG_PREFIX		    ?= scylla-operator-autoscaler-
 CRD_OPTIONS         ?= "crd:trivialVersions=true"
 
 .EXPORT_ALL_VARIABLES:
-DOCKER_BUILDKIT        		 	:= 1
 GOVERSION               		:= $(shell go version)
 GOPATH                  		:= $(shell go env GOPATH)
 KUBEBUILDER_ASSETS      		:= $(GOPATH)/bin

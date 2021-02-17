@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/scylladb/go-log"
 	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
-	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
@@ -34,11 +38,28 @@ func main() {
 		Level: atom,
 	})
 
-	var rootCmd = &cobra.Command{}
-	rootCmd.AddCommand(
-		newAdmissionControllerCmd(ctx, logger),
-	)
-	if err := rootCmd.Execute(); err != nil {
-		logger.Error(context.Background(), "Root command: a fatal error occured", "error", err)
+	logger.Info(ctx, "Initiating Admission Controller")
+
+	// setup a Manager
+	logger.Info(ctx, "Setting up manager")
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	if err != nil {
+		logger.Error(ctx, "Unable to set up overall controller manager", err)
+		os.Exit(1)
+	}
+
+	// setup webhooks
+	logger.Info(ctx, "Setting up webhook server")
+	webhookServer := mgr.GetWebhookServer()
+
+	logger.Info(ctx, "Registering webhooks to the webhook server")
+	webhookServer.Register("/mutate-scylla-scylladb-com-v1-scyllacluster", &webhook.Admission{
+		Handler: &recommendationApplier{Client: mgr.GetClient(), logger: logger},
+	})
+
+	logger.Info(ctx, "Starting manager")
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+		logger.Error(ctx, "Unable to run manager", err)
+		os.Exit(1)
 	}
 }
