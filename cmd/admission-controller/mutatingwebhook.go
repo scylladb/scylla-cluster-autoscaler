@@ -61,8 +61,7 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 	}
 
 	scas := &v1alpha1.ScyllaClusterAutoscalerList{}
-	err = c.List(ctx, scas)
-	if err != nil {
+	if err = c.List(ctx, scas); err != nil {
 		return fmt.Errorf("Failed to get SCAs: %s", err)
 	}
 
