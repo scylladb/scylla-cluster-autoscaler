@@ -10,7 +10,6 @@ import (
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
 	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -19,6 +18,7 @@ type recommendationApplier struct {
 	Client  client.Client
 	decoder *admission.Decoder
 
+	c      client.Client
 	logger log.Logger
 }
 
@@ -27,7 +27,7 @@ func getDataCenterRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler) []v1alp
 		return nil
 	}
 	dcRecs := sca.Status.Recommendations.DataCenterRecommendations
-	if dcRecs == nil || len(dcRecs) == 0 {
+	if len(dcRecs) == 0 {
 		return nil
 	}
 	return dcRecs
@@ -52,16 +52,10 @@ func findRack(rackName string, racks []scyllav1.RackSpec) *scyllav1.RackSpec {
 	return nil
 }
 
-func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.ScyllaCluster) error {
+func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.ScyllaCluster, c client.Client) error {
 	logger.Info(ctx, "Starting mutation of ScyllaCluster")
-
-	c, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
-	if err != nil {
-		return fmt.Errorf("Failed to create a client: %s", err)
-	}
-
 	scas := &v1alpha1.ScyllaClusterAutoscalerList{}
-	if err = c.List(ctx, scas); err != nil {
+	if err := c.List(ctx, scas); err != nil {
 		return fmt.Errorf("Failed to get SCAs: %s", err)
 	}
 
@@ -85,11 +79,6 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 
 		dataCenterName := cluster.Spec.Datacenter.Name
 
-		if cluster.Spec.Datacenter.Name != dataCenterName {
-			logger.Debug(ctx, "Data center name does not match")
-			continue
-		}
-
 		logger.Info(ctx, "Found data center with name", "data center", dataCenterName)
 
 		rackRecs := getRackRecommendations(dataCenterName, dcRecs)
@@ -112,11 +101,6 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 				continue
 			}
 
-			if rackRec.Name != rack.Name {
-				logger.Debug(ctx, "Rack name does not match")
-				continue
-			}
-
 			rack.Members = rackRec.Members.Target
 
 			logger.Info(ctx, "Rack updated", "rack", rackRec.Name)
@@ -134,7 +118,7 @@ func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Reque
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if err := mutateCluster(ctx, ra.logger, cluster); err != nil {
+	if err := mutateCluster(ctx, ra.logger, cluster, ra.c); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 

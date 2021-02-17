@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -48,13 +49,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// setup a client
+	client, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
+
 	// setup webhooks
 	logger.Info(ctx, "Setting up webhook server")
 	webhookServer := mgr.GetWebhookServer()
 
 	logger.Info(ctx, "Registering webhooks to the webhook server")
 	webhookServer.Register("/mutate-scylla-scylladb-com-v1-scyllacluster", &webhook.Admission{
-		Handler: &recommendationApplier{Client: mgr.GetClient(), logger: logger},
+		Handler: &recommendationApplier{Client: mgr.GetClient(), logger: logger, c: client},
 	})
 
 	logger.Info(ctx, "Starting manager")
