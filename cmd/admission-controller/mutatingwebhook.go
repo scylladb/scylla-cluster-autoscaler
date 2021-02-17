@@ -37,9 +37,6 @@ func getRackRecommendations(dataCenterName string,
 	dcRecs []v1alpha1.DataCenterRecommendations) []v1alpha1.RackRecommendations {
 	for idx := range dcRecs {
 		if dcRecs[idx].Name == dataCenterName {
-			if dcRecs[idx].RackRecommendations == nil {
-				return nil
-			}
 			return dcRecs[idx].RackRecommendations
 		}
 	}
@@ -64,8 +61,7 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 	}
 
 	scas := &v1alpha1.ScyllaClusterAutoscalerList{}
-	err = c.List(ctx, scas)
-	if err != nil {
+	if err = c.List(ctx, scas); err != nil {
 		return fmt.Errorf("Failed to get SCAs: %s", err)
 	}
 
@@ -138,8 +134,7 @@ func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Reque
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	err = mutateCluster(ctx, ra.logger, cluster)
-	if err != nil {
+	if err := mutateCluster(ctx, ra.logger, cluster); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
