@@ -127,8 +127,7 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Request) admission.Response {
 	cluster := &scyllav1.ScyllaCluster{}
 
-	err := ra.decoder.Decode(req, cluster)
-	if err != nil {
+	if err := ra.decoder.Decode(req, cluster); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
