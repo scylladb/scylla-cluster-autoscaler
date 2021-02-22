@@ -64,6 +64,20 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 	for idx := range scas.Items {
 		sca := &scas.Items[idx]
 
+		targetRef := sca.Spec.TargetRef
+		referencedCluster := &scyllav1.ScyllaCluster{}
+		var err = c.Get(ctx, client.ObjectKey{
+			Namespace: targetRef.Namespace,
+			Name:      targetRef.Name,
+		}, cluster)
+		if err != nil {
+			return fmt.Errorf("Fetch referenced ScyllaCluster: %s", err)
+		}
+
+		if referencedCluster != cluster {
+			logger.Debug(ctx, "SCA not pointing to cluster under mutation")
+		}
+
 		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
 			logger.Debug(ctx, "Autoscaler has 'off' scaling policy, skipping", "autoscaler", sca.ObjectMeta.Name)
 			continue
