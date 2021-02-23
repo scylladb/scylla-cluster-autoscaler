@@ -52,6 +52,9 @@ type ScyllaClusterAutoscalerSpec struct {
 	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
 
 	// +optional
+	ScalingRuleGroups map[string]ScalingRuleGroup `json:"scalingRuleGroups,omitempty"`
+
+	// +optional
 	ScalingPolicy *ScalingPolicy `json:"scalingPolicy,omitempty"`
 }
 
@@ -66,15 +69,27 @@ type UpdatePolicy struct {
 	UpdateMode *UpdateMode `json:"updateMode,omitempty"`
 }
 
+type ScalingRuleGroup struct {
+	Rules []ScalingRule `json:"rules"`
+}
+
+type ScalingRule struct {
+	Name      string            `json:"name"`
+	Metric    string            `json:"metric"`
+	Labels    map[string]string `json:"labels"`
+	Threshold float64           `json:"threshold"`
+	Instances int32             `json:"instances"`
+}
+
 type ScalingPolicy struct {
 	// +optional
-	DataCenterScalingPolicies []DataCenterScalingPolicy `json:"dataCenterScalingPolicies,omitempty"`
+	Datacenters []DataCenterScalingPolicy `json:"datacenters,omitempty"`
 }
 
 type DataCenterScalingPolicy struct {
 	Name string `json:"name"`
 	// +optional
-	RackScalingPolicies []RackScalingPolicy `json:"rackScalingPolicies,omitempty"`
+	RackScalingPolicies []RackScalingPolicy `json:"racks,omitempty"`
 }
 
 type RackScalingPolicy struct {
@@ -87,6 +102,8 @@ type RackScalingPolicy struct {
 
 	// +optional
 	RackResourcePolicy *RackResourcePolicy `json:"resourcePolicy,omitempty"`
+
+	ScalingRuleGroup string `json:"scalingRuleGroup"`
 }
 
 type RackResourcePolicy struct {

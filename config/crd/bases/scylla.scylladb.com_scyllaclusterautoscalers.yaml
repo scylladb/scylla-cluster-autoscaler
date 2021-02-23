@@ -1,10 +1,10 @@
 
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: scyllaclusterautoscalers.scylla.scylladb.com
 spec:
@@ -15,149 +15,173 @@ spec:
     plural: scyllaclusterautoscalers
     singular: scyllaclusterautoscaler
   scope: Namespaced
-  subresources:
-    status: {}
-  validation:
-    openAPIV3Schema:
-      description: ScyllaClusterAutoscaler is the Schema for the ScyllaClusterAutoscalers
-        API
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-          type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        spec:
-          description: ScyllaClusterAutoscalerSpec defines the desired state of ScyllaClusterAutoscaler
-          properties:
-            scalingPolicy:
-              properties:
-                dataCenterScalingPolicies:
-                  items:
-                    properties:
-                      name:
-                        type: string
-                      rackScalingPolicies:
-                        items:
-                          properties:
-                            maxMembers:
-                              type: integer
-                            minMembers:
-                              type: integer
-                            name:
-                              type: string
-                            resourcePolicy:
-                              properties:
-                                maxAllowed:
-                                  additionalProperties:
-                                    anyOf:
-                                    - type: integer
-                                    - type: string
-                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                    x-kubernetes-int-or-string: true
-                                  description: ResourceList is a set of (resource
-                                    name, quantity) pairs.
-                                  type: object
-                                minAllowed:
-                                  additionalProperties:
-                                    anyOf:
-                                    - type: integer
-                                    - type: string
-                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                    x-kubernetes-int-or-string: true
-                                  description: ResourceList is a set of (resource
-                                    name, quantity) pairs.
-                                  type: object
-                              type: object
-                          required:
-                          - name
-                          type: object
-                        type: array
-                    required:
-                    - name
-                    type: object
-                  type: array
-              type: object
-            targetRef:
-              properties:
-                name:
-                  type: string
-                namespace:
-                  type: string
-              required:
-              - name
-              - namespace
-              type: object
-            updatePolicy:
-              properties:
-                updateMode:
-                  enum:
-                  - "Off"
-                  - Initial
-                  - Auto
-                  type: string
-              type: object
-          required:
-          - targetRef
-          type: object
-        status:
-          description: ScyllaClusterAutoscalerStatus defines the observed state of
-            ScyllaClusterAutoscaler
-          properties:
-            recommendations:
-              properties:
-                dataCenterRecommendations:
-                  items:
-                    properties:
-                      name:
-                        type: string
-                      rackRecommendations:
-                        items:
-                          properties:
-                            members:
-                              properties:
-                                target:
-                                  format: int32
-                                  type: integer
-                              type: object
-                            name:
-                              type: string
-                            resources:
-                              properties:
-                                target:
-                                  additionalProperties:
-                                    anyOf:
-                                    - type: integer
-                                    - type: string
-                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                    x-kubernetes-int-or-string: true
-                                  description: ResourceList is a set of (resource
-                                    name, quantity) pairs.
-                                  type: object
-                              type: object
-                          required:
-                          - name
-                          type: object
-                        type: array
-                    required:
-                    - name
-                    type: object
-                  type: array
-              type: object
-          type: object
-      type: object
-  version: v1alpha1
   versions:
   - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ScyllaClusterAutoscaler is the Schema for the ScyllaClusterAutoscalers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ScyllaClusterAutoscalerSpec defines the desired state of ScyllaClusterAutoscaler
+            properties:
+              scalingPolicy:
+                properties:
+                  datacenters:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        racks:
+                          items:
+                            properties:
+                              maxMembers:
+                                type: integer
+                              minMembers:
+                                type: integer
+                              name:
+                                type: string
+                              resourcePolicy:
+                                properties:
+                                  maxAllowed:
+                                    additionalProperties:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                      x-kubernetes-int-or-string: true
+                                    description: ResourceList is a set of (resource name, quantity) pairs.
+                                    type: object
+                                  minAllowed:
+                                    additionalProperties:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                      x-kubernetes-int-or-string: true
+                                    description: ResourceList is a set of (resource name, quantity) pairs.
+                                    type: object
+                                type: object
+                              scalingRuleGroup:
+                                type: string
+                            required:
+                            - name
+                            - scalingRuleGroup
+                            type: object
+                          type: array
+                      required:
+                      - name
+                      type: object
+                    type: array
+                type: object
+              scalingRuleGroups:
+                additionalProperties:
+                  properties:
+                    rules:
+                      items:
+                        properties:
+                          instances:
+                            format: int32
+                            type: integer
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          metric:
+                            type: string
+                          name:
+                            type: string
+                          threshold:
+                            type: number
+                        required:
+                        - instances
+                        - labels
+                        - metric
+                        - name
+                        - threshold
+                        type: object
+                      type: array
+                  required:
+                  - rules
+                  type: object
+                type: object
+              targetRef:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
+              updatePolicy:
+                properties:
+                  updateMode:
+                    enum:
+                    - "Off"
+                    - Initial
+                    - Auto
+                    type: string
+                type: object
+            required:
+            - targetRef
+            type: object
+          status:
+            description: ScyllaClusterAutoscalerStatus defines the observed state of ScyllaClusterAutoscaler
+            properties:
+              recommendations:
+                properties:
+                  dataCenterRecommendations:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        rackRecommendations:
+                          items:
+                            properties:
+                              members:
+                                properties:
+                                  target:
+                                    format: int32
+                                    type: integer
+                                type: object
+                              name:
+                                type: string
+                              resources:
+                                properties:
+                                  target:
+                                    additionalProperties:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                      x-kubernetes-int-or-string: true
+                                    description: ResourceList is a set of (resource name, quantity) pairs.
+                                    type: object
+                                type: object
+                            required:
+                            - name
+                            type: object
+                          type: array
+                      required:
+                      - name
+                      type: object
+                    type: array
+                type: object
+            type: object
+        type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""
