@@ -1,5 +1,0 @@
-resources:
-- scylla_cluster_autoscaler_role.yaml
-- scylla_cluster_autoscaler_role_binding.yaml
-- scylla_cluster_role.yaml
-- scylla_cluster_role_binding.yaml

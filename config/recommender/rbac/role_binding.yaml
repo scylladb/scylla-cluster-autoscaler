@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: system:scylla-cluster-autoscaler-actor
+  name: system:recommender-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:scylla-cluster-autoscaler-actor
+  name: system:recommender-role
 subjects:
   - kind: ServiceAccount
     name: default
