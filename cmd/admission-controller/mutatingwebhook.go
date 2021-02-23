@@ -64,6 +64,11 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 	for idx := range scas.Items {
 		sca := &scas.Items[idx]
 
+		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
+			logger.Debug(ctx, "Autoscaler has 'off' scaling policy, skipping", "autoscaler", sca.ObjectMeta.Name)
+			continue
+		}
+
 		targetRef := sca.Spec.TargetRef
 		referencedCluster := &scyllav1.ScyllaCluster{}
 		var err = c.Get(ctx, client.ObjectKey{
@@ -76,11 +81,6 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 
 		if referencedCluster != cluster {
 			logger.Debug(ctx, "SCA not pointing to cluster under mutation")
-		}
-
-		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
-			logger.Debug(ctx, "Autoscaler has 'off' scaling policy, skipping", "autoscaler", sca.ObjectMeta.Name)
-			continue
 		}
 
 		logger.Debug(ctx, "Cluster has 'Initial' or 'Auto' scaling policy")
@@ -126,12 +126,13 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 
 func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Request) admission.Response {
 	cluster := &scyllav1.ScyllaCluster{}
+	var err error
 
-	if err := ra.decoder.Decode(req, cluster); err != nil {
+	if err = ra.decoder.Decode(req, cluster); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if err := mutateCluster(ctx, ra.logger, cluster, ra.c); err != nil {
+	if err = mutateCluster(ctx, ra.logger, cluster, ra.c); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
