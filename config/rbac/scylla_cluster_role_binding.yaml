@@ -8,5 +8,8 @@ roleRef:
   name: system:scylla-cluster-actor
 subjects:
   - kind: ServiceAccount
+    name: updater-service-account
+    namespace: system
+  - kind: ServiceAccount
     name: default
     namespace: system
