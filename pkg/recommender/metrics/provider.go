@@ -7,7 +7,7 @@ import (
 )
 
 type Provider interface {
-	FetchMetric(ctx context.Context, metric string, labels map[string]string) (float64, error)
+	FetchMetric(ctx context.Context, expression string) (bool, error)
 }
 
 type provider struct {

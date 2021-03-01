@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,10 +49,7 @@ type ScyllaClusterAutoscalerSpec struct {
 	TargetRef *TargetRef `json:"targetRef"`
 
 	// +optional
-	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
-
-	// +optional
-	ScalingRuleGroups map[string]ScalingRuleGroup `json:"scalingRuleGroups,omitempty"`
+	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"` // TODO add default for UpdateMode
 
 	// +optional
 	ScalingPolicy *ScalingPolicy `json:"scalingPolicy,omitempty"`
@@ -66,63 +63,85 @@ type TargetRef struct {
 
 type UpdatePolicy struct {
 	// +optional
-	UpdateMode *UpdateMode `json:"updateMode,omitempty"`
+	UpdateMode UpdateMode `json:"updateMode"`
 }
 
-type ScalingRuleGroup struct {
-	Rules []ScalingRule `json:"rules"`
-}
-
-type ScalingRule struct {
-	Name      string            `json:"name"`
-	Metric    string            `json:"metric"`
-	Labels    map[string]string `json:"labels"`
-	Threshold float64           `json:"threshold"`
-	Instances int32             `json:"instances"`
-}
-
-type ScalingPolicy struct {
-	// +optional
-	Datacenters []DataCenterScalingPolicy `json:"datacenters,omitempty"`
-}
-
-type DataCenterScalingPolicy struct {
-	Name string `json:"name"`
-	// +optional
-	RackScalingPolicies []RackScalingPolicy `json:"racks,omitempty"`
-}
-
-type RackScalingPolicy struct {
-	Name string `json:"name"`
-	// +optional
-	MinMembers *int `json:"minMembers,omitempty"`
-
-	// +optional
-	MaxMembers *int `json:"maxMembers,omitempty"`
-
-	// +optional
-	RackResourcePolicy *RackResourcePolicy `json:"resourcePolicy,omitempty"`
-
-	ScalingRuleGroup string `json:"scalingRuleGroup"`
-}
-
-type RackResourcePolicy struct {
-	// +optional
-	MinAllowed v1.ResourceList `json:"minAllowed,omitempty"`
-
-	// +optional
-	MaxAllowed v1.ResourceList `json:"maxAllowed,omitempty"`
-}
-
-// +kubebuilder:validation:Enum=Off;Initial;Auto
+// +kubebuilder:validation:Enum=Off;Auto
 type UpdateMode string
 
 const (
 	UpdateModeOff UpdateMode = "Off"
 
-	UpdateModeInitial UpdateMode = "Initial"
+	UpdateModeOn UpdateMode = "Auto"
+)
 
-	UpdateModeAuto UpdateMode = "Auto"
+type ScalingPolicy struct {
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Datacenters []DatacenterScalingPolicy `json:"datacenters,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+type DatacenterScalingPolicy struct {
+	Name string `json:"name"`
+
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	RackScalingPolicies []RackScalingPolicy `json:"racks,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+type RackScalingPolicy struct {
+	Name string `json:"name"`
+
+	// +optional
+	MemberPolicy *RackMemberPolicy `json:"memberPolicy,omitempty"`
+
+	// +optional
+	ResourcePolicy *RackResourcePolicy `json:"resourcePolicy,omitempty"`
+
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	ScalingRules []ScalingRule `json:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+type RackMemberPolicy struct {
+	// +optional
+	MinAllowed *int32 `json:"minAllowed,omitempty"`
+
+	// +optional
+	MaxAllowed *int32 `json:"maxAllowed,omitempty"`
+}
+
+type RackResourcePolicy struct {
+	// +optional
+	MinAllowedCpu *resource.Quantity `json:"minAllowedCpu,omitempty"`
+
+	// +optional
+	MaxAllowedCpu *resource.Quantity `json:"maxAllowedCpu,omitempty"`
+}
+
+type ScalingRule struct {
+	Name string `json:"name"`
+
+	// +kubebuilder:validation:Minimum=0
+	Priority int32 `json:"priority"`
+
+	Expression string `json:"expression"`
+
+	ScalingMode ScalingMode `json:"mode"`
+
+	ScalingFactor float64 `json:"factor"`
+}
+
+// +kubebuilder:validation:Enum=Horizontal;Vertical
+type ScalingMode string
+
+const (
+	ScalingModeHorizontal ScalingMode = "Horizontal"
+
+	ScalingModeVertical ScalingMode = "Vertical"
 )
 
 // ScyllaClusterAutoscalerStatus defines the observed state of ScyllaClusterAutoscaler
@@ -154,11 +173,11 @@ type RackRecommendations struct {
 }
 
 type RecommendedRackMembers struct {
-	Target int32 `json:"target,omitempty"`
+	Target int32 `json:"target"`
 }
 
 type RecommendedRackResources struct {
-	Target v1.ResourceList `json:"target,omitempty"`
+	TargetCPU resource.Quantity `json:"targetCpu"`
 }
 
 func init() {

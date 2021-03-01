@@ -6,20 +6,30 @@ spec:
   targetRef:
     namespace: scylla
     name: simple-cluster
-  updatePolicy:
-    updateMode: "Auto"
-  scalingRuleGroups:
-    test:
-      rules:
-      - name: test
-        metric: scylla_reactor_utilization
-        threshold: 70
-        instances: 1
-        labels:
-          app: scylla
   scalingPolicy:
     datacenters:
     - name: us-east-1
       racks:
       - name: us-east-1a
-        scalingRuleGroup: test
+        rules:
+        - name: "cpu utilization horizontal up"
+          priority: 1
+          expression: "scylla_reactor_utilization{scylla_cluster=\"simple-cluster\",scylla_datacenter=\"us-east-1\",scylla_rack=\"us-east-1a\"} > bool 70"
+          mode: "Horizontal"
+          factor: 2
+        - name: "cpu utilization horizontal down"
+          priority: 1
+          expression: "scylla_reactor_utilization{scylla_cluster=\"simple-cluster\",scylla_datacenter=\"us-east-1\",scylla_rack=\"us-east-1a\"} < bool 5"
+          mode: "Horizontal"
+          factor: 0.5
+        - name: "cpu utilization vertical down"
+          priority: 0
+          expression: "scylla_reactor_utilization{scylla_cluster=\"simple-cluster\",scylla_datacenter=\"us-east-1\",scylla_rack=\"us-east-1a\"} < bool 5"
+          mode: "Vertical"
+          factor: 0.5
+        memberPolicy:
+          minAllowed: 1
+          maxAllowed: 5
+        resourcePolicy:
+          minAllowedCpu: 100m
+          maxAllowedCpu: 2

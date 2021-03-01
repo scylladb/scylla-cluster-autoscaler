@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
@@ -60,30 +59,11 @@ func discover(ctx context.Context, c client.Client, metricsSelector map[string]s
 	return &promClient, nil
 }
 
-func mapToString(m map[string]string) (string, error) {
-	b := new(bytes.Buffer)
-
-	for key, value := range m {
-		_, err := fmt.Fprintf(b, "%s=\"%s\",", key, value)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return b.String(), nil
-}
-
-func (p *prometheusProvider) FetchMetric(ctx context.Context, metric string, labels map[string]string) (float64, error) {
-	labelsStr, err := mapToString(labels)
-	if err != nil {
-		return 0, errors.Wrap(err, "convert labels map to string")
-	}
-
-	query := fmt.Sprintf("%s{%s}", metric, labelsStr)
-	result, warnings, err := p.api.Query(ctx, query, time.Now())
+func (p *prometheusProvider) FetchMetric(ctx context.Context, expression string) (bool, error) {
+	result, warnings, err := p.api.Query(ctx, expression, time.Now())
 
 	if err != nil {
-		return 0, errors.Wrap(err, "query")
+		return false, errors.Wrap(err, "query")
 	}
 
 	if len(warnings) > 0 {
@@ -92,8 +72,8 @@ func (p *prometheusProvider) FetchMetric(ctx context.Context, metric string, lab
 
 	resultVector := result.(model.Vector)
 	if resultVector.Len() == 0 {
-		return 0, errors.New("no results")
+		return false, errors.New("no results")
 	}
 
-	return float64(resultVector[0].Value), nil
+	return resultVector[0].Value != 0, nil
 }
