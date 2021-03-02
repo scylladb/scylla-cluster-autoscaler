@@ -41,23 +41,13 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 	for idx := range scas.Items {
 		sca := &scas.Items[idx]
 
-		targetRef := sca.Spec.TargetRef
-		referencedCluster := &scyllav1.ScyllaCluster{}
-		var err = c.Get(ctx, client.ObjectKey{
-			Namespace: targetRef.Namespace,
-			Name:      targetRef.Name,
-		}, cluster)
-		if err != nil {
-			return fmt.Errorf("fetch referenced ScyllaCluster: %s", err)
-		}
-
-		if referencedCluster.ClusterName != cluster.ClusterName {
-			logger.Debug(ctx, "SCA not pointing to cluster under mutation")
+		if sca.ObjectMeta.Name != cluster.Name || sca.ObjectMeta.Namespace != cluster.Namespace {
+			logger.Debug(ctx, "SCA different than SCA of this Admission Controller", "SCA name", sca.ObjectMeta.Name, "SCA namespace", sca.ObjectMeta.Namespace)
 			continue
 		}
 
 		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
-			logger.Debug(ctx, "SCA has 'off' scaling policy, skipping", "autoscaler", sca.ObjectMeta.Name)
+			logger.Debug(ctx, "SCA has 'off' scaling policy, skipping", "SCA name", sca.ObjectMeta.Name)
 			continue
 		}
 
@@ -94,6 +84,9 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 			}
 		}
 	}
+
+	logger.Debug(ctx, "cluster change request successfully passed validation")
+
 	return nil
 }
 
