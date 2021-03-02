@@ -22,15 +22,15 @@ type recommendationApplier struct {
 	logger log.Logger
 }
 
+var (
+	updaterServiceAccountUsername = "system:serviceaccount:scylla-operator-autoscaler-system:scylla-operator-autoscaler-updater-service-account"
+)
+
 func getDataCenterRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler) []v1alpha1.DataCenterRecommendations {
 	if sca.Status.Recommendations == nil {
 		return nil
 	}
-	dcRecs := sca.Status.Recommendations.DataCenterRecommendations
-	if len(dcRecs) == 0 {
-		return nil
-	}
-	return dcRecs
+	return sca.Status.Recommendations.DataCenterRecommendations
 }
 
 func getRackRecommendations(dataCenterName string,
@@ -83,7 +83,7 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 			logger.Debug(ctx, "SCA not pointing to cluster under mutation")
 		}
 
-		logger.Debug(ctx, "Cluster has 'Initial' or 'Auto' scaling policy")
+		logger.Debug(ctx, "Cluster has 'Auto' scaling policy")
 
 		dcRecs := getDataCenterRecommendations(sca)
 		if dcRecs == nil {
@@ -132,8 +132,12 @@ func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Reque
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if err = mutateCluster(ctx, ra.logger, cluster, ra.c); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
+	if req.AdmissionRequest.UserInfo.Username != updaterServiceAccountUsername {
+		if err = mutateCluster(ctx, ra.logger, cluster, ra.c); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+	} else {
+		ra.logger.Debug(ctx, "Skipping mutation", "username", req.AdmissionRequest.UserInfo.Username)
 	}
 
 	marshaledCluster, err := json.Marshal(cluster)
