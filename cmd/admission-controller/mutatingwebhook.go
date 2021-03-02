@@ -15,13 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// recommendationApplier overwrites ScyllaCluster spec with recomendations given by Recommender (if available)
-type recommendationApplier struct {
+// admissionValidator checks whether requests from sources other than Updater change resources of ScyllaCluster
+type admissionValidator struct {
 	Client  client.Client
 	decoder *admission.Decoder
 
-	c      client.Client
-	logger log.Logger
+	scyllaClient client.Client
+	logger       log.Logger
 }
 
 var (
@@ -63,7 +63,7 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 
 		logger.Debug(ctx, "cluster has 'Auto' scaling policy")
 
-		// check if user is changing values administered by autoscaler
+		// check if user is changing resources administered by autoscaler
 		for idr := range cluster.Spec.Datacenter.Racks {
 			rack := cluster.Spec.Datacenter.Racks[idr]
 
@@ -97,7 +97,7 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 	return nil
 }
 
-func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (av *admissionValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	cluster := &scyllav1.ScyllaCluster{}
 	oldCluster := &scyllav1.ScyllaCluster{}
 	var err error
@@ -105,20 +105,20 @@ func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Reque
 	if len(req.OldObject.Raw) == 0 {
 		return admission.Errored(http.StatusBadRequest, errors.New("there is no content to decode"))
 	}
-	if err = ra.decoder.DecodeRaw(req.OldObject, oldCluster); err != nil {
+	if err = av.decoder.DecodeRaw(req.OldObject, oldCluster); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if err = ra.decoder.Decode(req, cluster); err != nil {
+	if err = av.decoder.Decode(req, cluster); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	if req.AdmissionRequest.UserInfo.Username != updaterServiceAccountUsername {
-		if err = mutateCluster(ctx, ra.logger, cluster, oldCluster, ra.c); err != nil {
+		if err = mutateCluster(ctx, av.logger, cluster, oldCluster, av.scyllaClient); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 	} else {
-		ra.logger.Debug(ctx, "skipping mutation", "username", req.AdmissionRequest.UserInfo.Username)
+		av.logger.Debug(ctx, "skipping mutation", "username", req.AdmissionRequest.UserInfo.Username)
 	}
 
 	marshaledCluster, err := json.Marshal(cluster)
@@ -129,7 +129,7 @@ func (ra *recommendationApplier) Handle(ctx context.Context, req admission.Reque
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledCluster)
 }
 
-func (ra *recommendationApplier) InjectDecoder(d *admission.Decoder) error {
-	ra.decoder = d
+func (av *admissionValidator) InjectDecoder(d *admission.Decoder) error {
+	av.decoder = d
 	return nil
 }
