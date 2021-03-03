@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// RackInfo is the basic info about rack (values that are administered by autoscaler)
+// RackInfo - basic info about rack (values that are administered by autoscaler)
 type RackInfo struct {
 	Name     string
 	Members  int32

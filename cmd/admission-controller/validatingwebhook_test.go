@@ -20,7 +20,7 @@ func TestValidateClusterChanges(t *testing.T) {
 	autoUpdateMode := v1alpha1.UpdateModeAuto
 	offUpdateMode := v1alpha1.UpdateModeOff
 
-	basicCluster := unit.NewDoubleRackCluster("test-cluster", "test-clutser-ns", "repo", "2.3.1", "test-dc",
+	basicCluster := unit.NewDoubleRackCluster("test-cluster", "test-cluster-ns", "repo", "2.3.1", "test-dc",
 		unit.RackInfo{
 			Name:     "rack-1",
 			Members:  3,
@@ -116,8 +116,8 @@ func TestValidateClusterChanges(t *testing.T) {
 			allowed:    false,
 		},
 		{
-			name:       "SCAs in 'Off' mode",
-			cluster:    basicCluster,
+			name:       "SCA in 'Off' mode",
+			cluster:    changedMembers,
 			oldCluster: oldBasicCluster,
 			scas:       offScas,
 			allowed:    true,
