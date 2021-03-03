@@ -6,138 +6,58 @@ import (
 
 	"github.com/scylladb/go-log"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
+	"github.com/scylladb/scylla-operator-autoscaler/pkg/test/unit"
 	v1 "github.com/scylladb/scylla-operator/pkg/api/v1"
-	"github.com/scylladb/scylla-operator/pkg/controllers/cluster/util"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-type rackInfo struct {
-	name     string
-	members  int32
-	capacity string
-	cpu      string
-	memory   string
-}
-
-func NewDoubleRackCluster(clusterName, clusterNamespace, repo, version, dcName string, firstRack, secondRack rackInfo) *v1.ScyllaCluster {
-	return &v1.ScyllaCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterName,
-			Namespace: clusterNamespace,
-		},
-		Spec: v1.ClusterSpec{
-			Repository: util.RefFromString(repo),
-			Version:    version,
-			Datacenter: v1.DatacenterSpec{
-				Name: dcName,
-				Racks: []v1.RackSpec{
-					{
-						Name:    firstRack.name,
-						Members: firstRack.members,
-						Storage: v1.StorageSpec{
-							Capacity: firstRack.capacity,
-						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse(firstRack.cpu),
-								corev1.ResourceMemory: resource.MustParse(firstRack.memory),
-							},
-						},
-					},
-					{
-						Name:    secondRack.name,
-						Members: secondRack.members,
-						Storage: v1.StorageSpec{
-							Capacity: secondRack.capacity,
-						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse(secondRack.cpu),
-								corev1.ResourceMemory: resource.MustParse(secondRack.memory),
-							},
-						},
-					},
-				},
-			},
-		},
-		Status: v1.ClusterStatus{ // todo maybe not include status in tests
-			Racks: map[string]v1.RackStatus{
-				firstRack.name: {
-					Version:      version,
-					Members:      firstRack.members,
-					ReadyMembers: firstRack.members,
-				},
-				secondRack.name: {
-					Version:      version,
-					Members:      secondRack.members,
-					ReadyMembers: secondRack.members,
-				},
-			},
-		},
-	}
-}
-
-func NewDoubleScyllaAutoscalerList(firstName, firstNamespace, secondName, secondNamespace string, firstMode, secondMode v1alpha1.UpdateMode) *v1alpha1.ScyllaClusterAutoscalerList {
-	return &v1alpha1.ScyllaClusterAutoscalerList{
-		Items: []v1alpha1.ScyllaClusterAutoscaler{
-			{
-				Spec: v1alpha1.ScyllaClusterAutoscalerSpec{
-					TargetRef: &v1alpha1.TargetRef{
-						Name:      firstName,
-						Namespace: firstNamespace,
-					},
-					UpdatePolicy: &v1alpha1.UpdatePolicy{
-						UpdateMode: &firstMode,
-					},
-				},
-			},
-			{
-				Spec: v1alpha1.ScyllaClusterAutoscalerSpec{
-					TargetRef: &v1alpha1.TargetRef{
-						Name:      secondName,
-						Namespace: secondNamespace,
-					},
-					UpdatePolicy: &v1alpha1.UpdatePolicy{
-						UpdateMode: &secondMode,
-					},
-				},
-			},
-		},
-	}
-}
 
 func TestValidateClusterChanges(t *testing.T) {
 	ctx := log.WithNewTraceID(context.Background())
 	atom := zap.NewAtomicLevelAt(zapcore.InfoLevel)
 	logger, _ := log.NewProduction(log.Config{Level: atom})
+	autoUpdateMode := v1alpha1.UpdateModeAuto
+	offUpdateMode := v1alpha1.UpdateModeOff
 
-	basicCluster := NewDoubleRackCluster("test-cluster", "test-clutser-ns", "repo", "2.3.1", "test-dc",
-		rackInfo{
-			name:     "rack-1",
-			members:  3,
-			capacity: "5Gi",
-			cpu:      "1",
-			memory:   "500M",
+	basicCluster := unit.NewDoubleRackCluster("test-cluster", "test-clutser-ns", "repo", "2.3.1", "test-dc",
+		unit.RackInfo{
+			Name:     "rack-1",
+			Members:  3,
+			Capacity: "5Gi",
+			CPU:      "1",
+			Memory:   "500M",
 		},
-		rackInfo{
-			name:     "rack-2",
-			members:  2,
-			capacity: "3Gi",
-			cpu:      "0.5",
-			memory:   "200M",
+		unit.RackInfo{
+			Name:     "rack-2",
+			Members:  2,
+			Capacity: "3Gi",
+			CPU:      "0.5",
+			Memory:   "200M",
 		},
 	)
 	oldBasicCluster := basicCluster.DeepCopy()
 
-	autoUpdateMode := v1alpha1.UpdateModeAuto
-	offUpdateMode := v1alpha1.UpdateModeOff
+	changedClusterName := basicCluster.DeepCopy()
+	changedClusterName.Name = "other-cluster"
 
-	basicScas := NewDoubleScyllaAutoscalerList("test-cluster", "test-cluster-ns", "other-cluster", "test-cluster-ns", autoUpdateMode, offUpdateMode)
+	changedMembers := basicCluster.DeepCopy()
+	changedMembers.Spec.Datacenter.Racks[0].Members = 1
+
+	changedMembersSecondRack := basicCluster.DeepCopy()
+	changedMembersSecondRack.Spec.Datacenter.Racks[1].Members = 10
+
+	changedCapacity := basicCluster.DeepCopy()
+	changedCapacity.Spec.Datacenter.Racks[0].Storage.Capacity = "1Gi"
+
+	changedCPU := basicCluster.DeepCopy()
+	changedCPU.Spec.Datacenter.Racks[0].Resources.Requests.Cpu().Set(2)
+
+	changedMemory := basicCluster.DeepCopy()
+	changedMemory.Spec.Datacenter.Racks[0].Resources.Requests.Memory().Set(2 * 1024 * 1024)
+
+	basicScas := unit.NewDoubleScyllaAutoscalerList("test-cluster", "test-cluster-ns", "other-cluster", "test-cluster-ns", autoUpdateMode, autoUpdateMode)
+	offScas := unit.NewDoubleScyllaAutoscalerList("test-cluster", "test-cluster-ns", "other-cluster", "test-cluster-ns", offUpdateMode, offUpdateMode)
 
 	tests := []struct {
 		name       string
@@ -151,6 +71,55 @@ func TestValidateClusterChanges(t *testing.T) {
 			cluster:    basicCluster,
 			oldCluster: oldBasicCluster,
 			scas:       basicScas,
+			allowed:    true,
+		},
+		{
+			name:       "changed cluster name",
+			cluster:    changedClusterName,
+			oldCluster: oldBasicCluster,
+			scas:       basicScas,
+			allowed:    true,
+		},
+		{
+			name:       "changed members in first rack",
+			cluster:    changedMembers,
+			oldCluster: oldBasicCluster,
+			scas:       basicScas,
+			allowed:    false,
+		},
+		{
+			name:       "changed members in second rack",
+			cluster:    changedMembersSecondRack,
+			oldCluster: oldBasicCluster,
+			scas:       basicScas,
+			allowed:    false,
+		},
+		{
+			name:       "changed capacity in first rack",
+			cluster:    changedCapacity,
+			oldCluster: oldBasicCluster,
+			scas:       basicScas,
+			allowed:    false,
+		},
+		{
+			name:       "changed cpu in first rack",
+			cluster:    changedCPU,
+			oldCluster: oldBasicCluster,
+			scas:       basicScas,
+			allowed:    false,
+		},
+		{
+			name:       "changed memory in first rack",
+			cluster:    changedMemory,
+			oldCluster: oldBasicCluster,
+			scas:       basicScas,
+			allowed:    false,
+		},
+		{
+			name:       "SCAs in 'Off' mode",
+			cluster:    basicCluster,
+			oldCluster: oldBasicCluster,
+			scas:       offScas,
 			allowed:    true,
 		},
 	}
