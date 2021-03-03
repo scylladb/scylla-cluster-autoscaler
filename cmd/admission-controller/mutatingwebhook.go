@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -28,21 +27,14 @@ var (
 	updaterServiceAccountUsername = "system:serviceaccount:scylla-operator-autoscaler-system:scylla-operator-autoscaler-updater-service-account"
 )
 
-func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.ScyllaCluster, oldCluster *scyllav1.ScyllaCluster, c client.Client) error {
-	logger.Info(ctx, "starting mutation of ScyllaCluster")
-
-	scas := &v1alpha1.ScyllaClusterAutoscalerList{}
-	if err := c.List(ctx, scas); err != nil {
-		return fmt.Errorf("failed to get SCAs: %s", err)
-	}
-
-	logger.Debug(ctx, "SCAs fetched", "num", len(scas.Items))
+func validateClusterChanges(ctx context.Context, logger log.Logger, cluster *scyllav1.ScyllaCluster, oldCluster *scyllav1.ScyllaCluster, scas *v1alpha1.ScyllaClusterAutoscalerList) error {
+	logger.Info(ctx, "starting validation of ScyllaCluster")
 
 	for idx := range scas.Items {
 		sca := &scas.Items[idx]
 
-		if sca.ObjectMeta.Name != cluster.Name || sca.ObjectMeta.Namespace != cluster.Namespace {
-			logger.Debug(ctx, "SCA different than SCA of this Admission Controller", "SCA name", sca.ObjectMeta.Name, "SCA namespace", sca.ObjectMeta.Namespace)
+		if sca.Spec.TargetRef.Name != cluster.Name || sca.Spec.TargetRef.Namespace != cluster.Namespace {
+			logger.Debug(ctx, "SCA different than SCA of this Admission Controller", "SCA name", sca.Spec.TargetRef.Name, "SCA namespace", sca.Spec.TargetRef.Namespace)
 			continue
 		}
 
@@ -75,11 +67,11 @@ func mutateCluster(ctx context.Context, logger log.Logger, cluster *scyllav1.Scy
 				return fmt.Errorf("changing storage.capacity is forbidden while cluster is administered by autoscaler")
 			}
 
-			if rack.Resources.Requests.Cpu().ToDec() != oldRack.Resources.Requests.Cpu().ToDec() {
+			if !rack.Resources.Requests.Cpu().Equal(*oldRack.Resources.Requests.Cpu()) {
 				return fmt.Errorf("changing requests.cpu is forbidden while cluster is administered by autoscaler")
 			}
 
-			if rack.Resources.Requests.Memory().ToDec() != oldRack.Resources.Requests.Memory().ToDec() {
+			if !rack.Resources.Requests.Memory().Equal(*oldRack.Resources.Requests.Memory()) {
 				return fmt.Errorf("changing requests.memory is forbidden while cluster is administered by autoscaler")
 			}
 		}
@@ -106,20 +98,22 @@ func (av *admissionValidator) Handle(ctx context.Context, req admission.Request)
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if req.AdmissionRequest.UserInfo.Username != updaterServiceAccountUsername {
-		if err = mutateCluster(ctx, av.logger, cluster, oldCluster, av.scyllaClient); err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-	} else {
-		av.logger.Debug(ctx, "skipping mutation", "username", req.AdmissionRequest.UserInfo.Username)
-	}
-
-	marshaledCluster, err := json.Marshal(cluster)
-	if err != nil {
+	scas := &v1alpha1.ScyllaClusterAutoscalerList{}
+	if err := av.scyllaClient.List(ctx, scas); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledCluster)
+	av.logger.Debug(ctx, "SCAs fetched", "num", len(scas.Items))
+
+	if req.AdmissionRequest.UserInfo.Username != updaterServiceAccountUsername {
+		if err = validateClusterChanges(ctx, av.logger, cluster, oldCluster, scas); err != nil {
+			return admission.Denied(err.Error())
+		}
+	} else {
+		av.logger.Debug(ctx, "skipping validation for Updater request", "username", req.AdmissionRequest.UserInfo.Username)
+	}
+
+	return admission.Allowed("")
 }
 
 func (av *admissionValidator) InjectDecoder(d *admission.Decoder) error {
