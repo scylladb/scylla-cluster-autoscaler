@@ -23,7 +23,7 @@ type admissionValidator struct {
 	logger       log.Logger
 }
 
-var (
+const (
 	updaterServiceAccountUsername = "system:serviceaccount:scylla-operator-autoscaler-system:scylla-operator-autoscaler-updater-service-account"
 )
 
@@ -39,11 +39,11 @@ func validateClusterChanges(ctx context.Context, logger log.Logger, cluster *scy
 		}
 
 		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
-			logger.Debug(ctx, "SCA has 'off' scaling policy, skipping", "SCA name", sca.ObjectMeta.Name)
+			logger.Debug(ctx, "SCA has 'off' update mode, skipping", "SCA name", sca.Spec.TargetRef.Name)
 			continue
 		}
 
-		logger.Debug(ctx, "cluster has 'Auto' scaling policy")
+		logger.Debug(ctx, "cluster has 'Auto' update mode")
 
 		// check if user is changing resources administered by autoscaler
 		for idr := range cluster.Spec.Datacenter.Racks {
