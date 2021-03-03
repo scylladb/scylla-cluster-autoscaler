@@ -17,12 +17,12 @@ func addFlags(cmd *cobra.Command) {
 	cmd.Flags().DurationP("interval", "i", 2*time.Minute, "Update interval")
 }
 
-func getDataCenterRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler) []v1alpha1.DataCenterRecommendations {
+func getDatacenterRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler) []v1alpha1.DatacenterRecommendations {
 	if sca.Status.Recommendations == nil {
 		return nil
 	}
 
-	dcRecs := sca.Status.Recommendations.DataCenterRecommendations
+	dcRecs := sca.Status.Recommendations.DatacenterRecommendations
 	if dcRecs == nil || len(dcRecs) == 0 {
 		return nil
 	}
@@ -30,10 +30,10 @@ func getDataCenterRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler) []v1alp
 	return dcRecs
 }
 
-func getRackRecommendations(dataCenterName string,
-	dcRecs []v1alpha1.DataCenterRecommendations) []v1alpha1.RackRecommendations {
+func getRackRecommendations(datacenterName string,
+	dcRecs []v1alpha1.DatacenterRecommendations) []v1alpha1.RackRecommendations {
 	for idx := range dcRecs {
-		if dcRecs[idx].Name == dataCenterName {
+		if dcRecs[idx].Name == datacenterName {
 			if dcRecs[idx].RackRecommendations == nil {
 				return nil
 			} else {
@@ -101,18 +101,18 @@ func newUpdaterCmd(ctx context.Context, logger log.Logger, level zap.AtomicLevel
 
 					logger.Debug(ctx, "fetched cluster", "cluster", cluster.Name)
 
-					dcRecs := getDataCenterRecommendations(sca)
+					dcRecs := getDatacenterRecommendations(sca)
 					if dcRecs == nil {
 						logger.Debug(ctx, "no recommendations for cluster", "cluster", cluster.Name)
 						continue
 					}
 
-					dataCenterName := cluster.Spec.Datacenter.Name
+					datacenterName := cluster.Spec.Datacenter.Name
 
-					rackRecs := getRackRecommendations(dataCenterName, dcRecs)
+					rackRecs := getRackRecommendations(datacenterName, dcRecs)
 					if rackRecs == nil {
 						logger.Debug(ctx, "no recommendations for data center", "data center",
-							dataCenterName)
+							datacenterName)
 						continue
 					}
 

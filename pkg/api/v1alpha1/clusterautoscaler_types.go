@@ -157,10 +157,10 @@ type ScyllaClusterAutoscalerStatus struct {
 
 type ScyllaClusterRecommendations struct {
 	// +optional
-	DataCenterRecommendations []DataCenterRecommendations `json:"dataCenterRecommendations,omitempty"`
+	DatacenterRecommendations []DatacenterRecommendations `json:"datacenterRecommendations,omitempty"`
 }
 
-type DataCenterRecommendations struct {
+type DatacenterRecommendations struct {
 	Name string `json:"name"`
 
 	// +optional
