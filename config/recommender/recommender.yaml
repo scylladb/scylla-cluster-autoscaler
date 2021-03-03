@@ -20,8 +20,8 @@ spec:
             - /recommender
           args:
             - recommender
-            - --metrics-interval=60s
-            - --metrics-selector-set=app=prometheus,component=server,release=scylla-prom
+            - --metrics-interval=10s
+            - --metrics-selector-set=app=kube-prometheus-stack-prometheus
           image: recommender:latest
           imagePullPolicy: Always
           name: recommender

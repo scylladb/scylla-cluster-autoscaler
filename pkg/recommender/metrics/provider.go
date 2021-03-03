@@ -4,10 +4,13 @@ import (
 	"context"
 	"github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/scylladb/go-log"
+	"time"
 )
 
 type Provider interface {
-	FetchMetric(ctx context.Context, expression string) (bool, error)
+	Query(ctx context.Context, expression string) (bool, error)
+
+	RangedQuery(ctx context.Context, expression string, duration time.Duration) (bool, error)
 }
 
 type provider struct {

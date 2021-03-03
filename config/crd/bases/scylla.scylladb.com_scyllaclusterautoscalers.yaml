@@ -75,6 +75,8 @@ spec:
                                       type: string
                                     factor:
                                       type: number
+                                    for:
+                                      type: string
                                     mode:
                                       enum:
                                       - Horizontal
@@ -114,8 +116,11 @@ spec:
                 - namespace
                 type: object
               updatePolicy:
+                default:
+                  updateMode: Auto
                 properties:
                   updateMode:
+                    default: Auto
                     enum:
                     - "Off"
                     - Auto

@@ -49,7 +49,8 @@ type ScyllaClusterAutoscalerSpec struct {
 	TargetRef *TargetRef `json:"targetRef"`
 
 	// +optional
-	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"` // TODO add default for UpdateMode
+	// +kubebuilder:default:={"updateMode":"Auto"}
+	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
 
 	// +optional
 	ScalingPolicy *ScalingPolicy `json:"scalingPolicy,omitempty"`
@@ -63,6 +64,7 @@ type TargetRef struct {
 
 type UpdatePolicy struct {
 	// +optional
+	// +kubebuilder:default:=Auto
 	UpdateMode UpdateMode `json:"updateMode"`
 }
 
@@ -129,6 +131,9 @@ type ScalingRule struct {
 	Priority int32 `json:"priority"`
 
 	Expression string `json:"expression"`
+
+	// +optional
+	For *string `json:"for"` // TODO add format validation for time.Duration
 
 	ScalingMode ScalingMode `json:"mode"`
 

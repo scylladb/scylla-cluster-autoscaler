@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"math"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 type Recommender interface {
@@ -88,16 +89,30 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 				recommendedRackResources := v1alpha1.RecommendedRackResources{TargetCPU: *rack.Resources.Requests.Cpu()}
 				for _, rule := range rackScalingPolicy.ScalingRules {
 					if rule.Priority >= priority {
+						// TODO change priorities to a different system???
 						continue // TODO solve conflicting priorities, i.e. two rules with equal priorities
 					}
 
-					res, err := r.metricsProvider.FetchMetric(ctx, rule.Expression)
+					var res bool
+					if rule.For != nil {
+						duration, err := time.ParseDuration(*rule.For)
+						if err != nil {
+							r.logger.Error(ctx, "invalid duration")
+							continue
+						}
+						res, err = r.metricsProvider.RangedQuery(ctx, rule.Expression, duration)
+					} else {
+						res, err = r.metricsProvider.Query(ctx, rule.Expression)
+					}
+
 					if err != nil {
 						r.logger.Error(ctx, "fetch rack metrics", "rack", rack.Name, "error", err)
 						continue
 					}
 
-					if !res {
+					if res {
+						r.logger.Info(ctx, "Condition met. Cluster will be scaled...", "rule", rule.Name)
+					} else {
 						continue
 					}
 
@@ -116,8 +131,10 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 						recommendedRackMembers.Target = calc
 					}
 
+
+					// TODO Assertion: limits == requests???
 					if rule.ScalingMode == v1alpha1.ScalingModeVertical {
-						// TODO check if requests exist???
+						// TODO check if requests/limits exist???
 						// TODO keep original scale???
 						// TODO check if value * factor overflows???
 
