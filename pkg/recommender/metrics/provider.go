@@ -10,10 +10,11 @@ import (
 type Provider interface {
 	Query(ctx context.Context, expression string) (bool, error)
 
-	RangedQuery(ctx context.Context, expression string, duration time.Duration) (bool, error)
+	RangedQuery(ctx context.Context, expression string, duration time.Duration, argStep *time.Duration) (bool, error)
 }
 
 type provider struct {
-	api    v1.API
-	logger log.Logger
+	api         v1.API
+	logger      log.Logger
+	defaultStep time.Duration
 }

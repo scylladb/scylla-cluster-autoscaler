@@ -20,8 +20,9 @@ spec:
             - /recommender
           args:
             - recommender
-            - --metrics-interval=10s
+            - --interval=10s
             - --metrics-selector-set=app=kube-prometheus-stack-prometheus
+            - --metrics-default-step=60s
           image: recommender:latest
           imagePullPolicy: Always
           name: recommender

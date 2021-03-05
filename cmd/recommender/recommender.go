@@ -13,11 +13,13 @@ import (
 var (
 	metricsInterval    time.Duration
 	metricsSelectorSet map[string]string
+	metricsDefaultStep time.Duration
 )
 
 func addFlags(cmd *cobra.Command) {
-	cmd.Flags().DurationVarP(&metricsInterval, "metrics-interval", "i", time.Minute, "Metrics fetching interval")
+	cmd.Flags().DurationVarP(&metricsInterval, "interval", "i", time.Minute, "Running interval")
 	cmd.Flags().StringToStringVar(&metricsSelectorSet, "metrics-selector-set", make(map[string]string, 0), "Label selector set for metrics server discovery")
+	cmd.Flags().DurationVar(&metricsDefaultStep, "metrics-default-step", time.Minute, "Metrics ranged queries' default step")
 }
 
 func newRecommenderCmd(ctx context.Context, logger log.Logger) *cobra.Command {
@@ -39,7 +41,7 @@ func newRecommenderCmd(ctx context.Context, logger log.Logger) *cobra.Command {
 				return
 			}
 
-			r, err := recommender.New(ctx, c, logger, metricsSelectorSet)
+			r, err := recommender.New(ctx, c, logger, metricsSelectorSet, metricsDefaultStep)
 			if err != nil {
 				logger.Fatal(ctx, "create recommender", "error", err)
 				return

@@ -8,6 +8,7 @@ import (
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/recommender/metrics"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/util"
 	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"math"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,8 +25,8 @@ type recommender struct {
 	metricsProvider metrics.Provider
 }
 
-func New(ctx context.Context, c client.Client, logger log.Logger, metricsSelector map[string]string) (Recommender, error) {
-	p, err := metrics.NewPrometheusProvider(ctx, c, logger, metricsSelector)
+func New(ctx context.Context, c client.Client, logger log.Logger, metricsSelector map[string]string, metricsDefaultStep time.Duration) (Recommender, error) {
+	p, err := metrics.NewPrometheusProvider(ctx, c, logger, metricsSelector, metricsDefaultStep)
 	if err != nil {
 		return nil, errors.Wrap(err, "create metrics provider")
 	}
@@ -127,23 +128,21 @@ func (r *recommender) getDatacenterRecommendations(ctx context.Context, datacent
 func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1.RackSpec, scalingPolicy *v1alpha1.RackScalingPolicy) *v1alpha1.RackRecommendations {
 	var err error
 	var priority int32 = math.MaxInt32
+	members := rack.Members
+	resources := rack.Resources
 
-	recommendedRackMembers := v1alpha1.RecommendedRackMembers{Target: rack.Members}
-	recommendedRackResources := v1alpha1.RecommendedRackResources{TargetCPU: *rack.Resources.Requests.Cpu()}
 	for _, rule := range scalingPolicy.ScalingRules {
 		if rule.Priority >= priority {
-			// TODO change priorities to a different system???
-			continue // TODO solve conflicting priorities, i.e. two rules with equal priorities
+			continue // TODO solve conflicting priorities, i.e. two rules with equal priorities???
 		}
 
 		var res bool
 		if rule.For != nil {
-			duration, err := time.ParseDuration(*rule.For)
-			if err != nil {
-				r.logger.Error(ctx, "invalid duration")
-				continue
+			var step *time.Duration = nil
+			if rule.Step != nil {
+				step = &rule.Step.Duration
 			}
-			res, err = r.metricsProvider.RangedQuery(ctx, rule.Expression, duration)
+			res, err = r.metricsProvider.RangedQuery(ctx, rule.Expression, rule.For.Duration, step)
 		} else {
 			res, err = r.metricsProvider.Query(ctx, rule.Expression)
 		}
@@ -158,46 +157,73 @@ func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1
 		}
 
 		if rule.ScalingMode == v1alpha1.ScalingModeHorizontal {
-			// TODO check if value * factor overflows???
-			calc := int32(rule.ScalingFactor * float64(rack.Members))
-
-			if scalingPolicy.MemberPolicy != nil && scalingPolicy.MemberPolicy.MaxAllowed != nil {
-				calc = util.MinInt32(calc, *scalingPolicy.MemberPolicy.MaxAllowed)
+			var min, max *int32 = nil, nil
+			if scalingPolicy.MemberPolicy != nil {
+				max = scalingPolicy.MemberPolicy.MaxAllowed
+				min = scalingPolicy.MemberPolicy.MinAllowed
 			}
 
-			if scalingPolicy.MemberPolicy != nil && scalingPolicy.MemberPolicy.MinAllowed != nil {
-				calc = util.MaxInt32(calc, *scalingPolicy.MemberPolicy.MinAllowed)
+			members = calculateMembers(rack.Members, min, max, rule.ScalingFactor)
+		} else {
+			if rack.Resources.Requests == nil || rack.Resources.Requests.Cpu() == nil {
+				r.logger.Error(ctx, "cpu requests undefined")
+				continue
 			}
 
-			recommendedRackMembers.Target = calc
-		}
-
-		// TODO Assertion: limits == requests???
-		if rule.ScalingMode == v1alpha1.ScalingModeVertical {
-			// TODO check if requests/limits exist???
-			// TODO keep original scale???
-			// TODO check if value * factor overflows???
-
-			var calc *resource.Quantity
-			if rack.Resources.Requests.Cpu().Value() > (math.MaxInt64 / 1000) {
-				calc = resource.NewQuantity(int64(rule.ScalingFactor*float64(rack.Resources.Requests.Cpu().Value())), rack.Resources.Requests.Cpu().Format)
-			} else {
-				calc = resource.NewMilliQuantity(int64(rule.ScalingFactor*float64(rack.Resources.Requests.Cpu().ScaledValue(resource.Milli))), rack.Resources.Requests.Cpu().Format)
+			var min, max *resource.Quantity = nil, nil
+			if scalingPolicy.ResourcePolicy != nil {
+				min = scalingPolicy.ResourcePolicy.MinAllowedCpu
+				max = scalingPolicy.ResourcePolicy.MaxAllowedCpu
 			}
+			resources.Requests[corev1.ResourceCPU] = calculateCPU(rack.Resources.Requests.Cpu(), min, max, rule.ScalingFactor)
 
-			if scalingPolicy.ResourcePolicy != nil && scalingPolicy.ResourcePolicy.MaxAllowedCpu != nil {
-				calc = util.MinQuantity(calc, scalingPolicy.ResourcePolicy.MaxAllowedCpu)
+			if rack.Resources.Limits != nil && rack.Resources.Limits.Cpu() != nil {
+				if scalingPolicy.ResourcePolicy.RackControlledValues == v1alpha1.RackControlledValuesRequestsAndLimits {
+					resources.Limits[corev1.ResourceCPU] = calculateCPU(rack.Resources.Limits.Cpu(), min, max, rule.ScalingFactor)
+				} else {
+					resources.Requests[corev1.ResourceCPU] = util.MinQuantity(resources.Requests[corev1.ResourceCPU], resources.Limits[corev1.ResourceCPU])
+				}
 			}
-
-			if scalingPolicy.ResourcePolicy != nil && scalingPolicy.ResourcePolicy.MinAllowedCpu != nil {
-				calc = util.MaxQuantity(calc, scalingPolicy.ResourcePolicy.MinAllowedCpu)
-			}
-
-			recommendedRackResources.TargetCPU = *calc
 		}
 
 		priority = rule.Priority
 	}
 
-	return &v1alpha1.RackRecommendations{Name: rack.Name, Members: &recommendedRackMembers, Resources: &recommendedRackResources}
+	return &v1alpha1.RackRecommendations{Name: rack.Name, Members: &members, Resources: &resources}
+}
+
+func calculateMembers(current int32, min, max *int32, factor float64) int32 {
+	val := int32(factor * float64(current))
+
+	if max != nil {
+		val = util.MinInt32(val, *max)
+	}
+
+	if min != nil {
+		val = util.MaxInt32(val, *min)
+	}
+
+	return val
+}
+
+func calculateCPU(current, min, max *resource.Quantity, factor float64) resource.Quantity {
+	var val resource.Quantity
+
+	// TODO keep original scale???
+	// TODO check if this makes any sense
+	if current.Value() > (math.MaxInt64 / 1000) {
+		val = *resource.NewQuantity(int64(factor*float64(current.Value())), current.Format)
+	} else {
+		val = *resource.NewMilliQuantity(int64(factor*float64(current.ScaledValue(resource.Milli))), current.Format)
+	}
+
+	if max != nil {
+		val = util.MinQuantity(val, *max)
+	}
+
+	if min != nil {
+		val = util.MaxQuantity(val, *min)
+	}
+
+	return val
 }

@@ -19,24 +19,29 @@ type prometheusProvider struct {
 	provider
 }
 
-func NewPrometheusProvider(ctx context.Context, c client.Client, logger log.Logger, metricsSelector map[string]string) (Provider, error) {
-	promClient, err := discover(ctx, c, metricsSelector)
+const (
+	maxQueriesInRange = 11000
+)
+
+func NewPrometheusProvider(ctx context.Context, c client.Client, logger log.Logger, selector map[string]string, defaultStep time.Duration) (Provider, error) {
+	promClient, err := discover(ctx, c, selector)
 	if err != nil {
 		return nil, err
 	}
 
 	return &prometheusProvider{
 		provider: provider{
-			api:    v1.NewAPI(*promClient),
-			logger: logger,
+			api:         v1.NewAPI(*promClient),
+			logger:      logger,
+			defaultStep: defaultStep,
 		},
 	}, nil
 }
 
-func discover(ctx context.Context, c client.Client, metricsSelector map[string]string) (*api.Client, error) {
+func discover(ctx context.Context, c client.Client, selector map[string]string) (*api.Client, error) {
 	svcList := &corev1.ServiceList{}
 	err := c.List(ctx, svcList, &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(metricsSelector),
+		LabelSelector: labels.SelectorFromSet(selector),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list prometheus services")
@@ -82,9 +87,17 @@ func (p *prometheusProvider) Query(ctx context.Context, expression string) (bool
 	return resultVector[0].Value != 0, nil //TODO check all results instead of just the first one???
 }
 
-func (p *prometheusProvider) RangedQuery(ctx context.Context, expression string, duration time.Duration) (bool, error) {
+func (p *prometheusProvider) RangedQuery(ctx context.Context, expression string, duration time.Duration, argStep *time.Duration) (bool, error) {
 	now := time.Now()
-	result, warnings, err := p.api.QueryRange(ctx, expression, v1.Range{Start: now.Add(-duration), End: now, Step: time.Second}) //TODO calculate reasonable step
+	step := p.defaultStep
+	if argStep != nil {
+		step = *argStep
+	}
+	if duration/step > maxQueriesInRange {
+		step = duration/maxQueriesInRange + 1
+	}
+
+	result, warnings, err := p.api.QueryRange(ctx, expression, v1.Range{Start: now.Add(-duration), End: now, Step: step})
 
 	if err != nil {
 		return false, errors.Wrap(err, "ranged query")

@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -122,7 +123,20 @@ type RackResourcePolicy struct {
 
 	// +optional
 	MaxAllowedCpu *resource.Quantity `json:"maxAllowedCpu,omitempty"`
+
+	// +optional
+	// +kubebuilder:default:=RequestsAndLimits
+	RackControlledValues RackControlledValues `json:"controlledValues"`
 }
+
+// +kubebuilder:validation:Enum=Requests;RequestsAndLimits
+type RackControlledValues string
+
+const (
+	RackControlledValuesRequests RackControlledValues = "Requests"
+
+	RackControlledValuesRequestsAndLimits RackControlledValues = "RequestsAndLimits"
+)
 
 type ScalingRule struct {
 	Name string `json:"name"`
@@ -133,7 +147,10 @@ type ScalingRule struct {
 	Expression string `json:"expression"`
 
 	// +optional
-	For *string `json:"for"` // TODO add format validation for time.Duration
+	For *metav1.Duration `json:"for"`
+
+	// +optional
+	Step *metav1.Duration `json:"step"`
 
 	ScalingMode ScalingMode `json:"mode"`
 
@@ -171,18 +188,10 @@ type RackRecommendations struct {
 	Name string `json:"name"`
 
 	// +optional
-	Members *RecommendedRackMembers `json:"members,omitempty"`
+	Members *int32 `json:"members,omitempty"`
 
 	// +optional
-	Resources *RecommendedRackResources `json:"resources,omitempty"`
-}
-
-type RecommendedRackMembers struct {
-	Target int32 `json:"target"`
-}
-
-type RecommendedRackResources struct {
-	TargetCPU resource.Quantity `json:"targetCpu"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 func init() {

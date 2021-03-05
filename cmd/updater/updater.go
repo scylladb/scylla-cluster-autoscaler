@@ -132,7 +132,7 @@ func newUpdaterCmd(ctx context.Context, logger log.Logger, level zap.AtomicLevel
 							continue
 						}
 
-						rack.Members = rackRec.Members.Target
+						rack.Members = *rackRec.Members
 
 						err = c.Update(ctx, cluster)
 						if err != nil {
