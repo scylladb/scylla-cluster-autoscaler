@@ -10,6 +10,7 @@ import (
 	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
@@ -53,7 +54,9 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 			continue
 		}
 
+		sca.Status.LastUpdated = metav1.NewTime(time.Now())
 		sca.Status.Recommendations = r.getScyllaClusterRecommendations(ctx, sc, sca.Spec.ScalingPolicy)
+
 		err = r.client.Status().Update(ctx, sca)
 		if err != nil {
 			r.logger.Error(ctx, "SCA status update", "error", err)
