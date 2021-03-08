@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func TestValidateClusterChanges(t *testing.T) {
@@ -51,10 +53,16 @@ func TestValidateClusterChanges(t *testing.T) {
 	changedCapacity.Spec.Datacenter.Racks[0].Storage.Capacity = "1Gi"
 
 	changedCPU := basicCluster.DeepCopy()
-	changedCPU.Spec.Datacenter.Racks[0].Resources.Requests.Cpu().Set(2)
+	changedCPU.Spec.Datacenter.Racks[0].Resources.Requests = corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("0.5"),
+		corev1.ResourceMemory: resource.MustParse("5Gi"),
+	}
 
 	changedMemory := basicCluster.DeepCopy()
-	changedMemory.Spec.Datacenter.Racks[0].Resources.Requests.Memory().Set(2 * 1024 * 1024)
+	changedMemory.Spec.Datacenter.Racks[0].Resources.Requests = corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("1"),
+		corev1.ResourceMemory: resource.MustParse("1Gi"),
+	}
 
 	basicScas := unit.NewDoubleScyllaAutoscalerList("test-cluster", "test-cluster-ns", "other-cluster", "test-cluster-ns", autoUpdateMode, autoUpdateMode)
 	offScas := unit.NewDoubleScyllaAutoscalerList("test-cluster", "test-cluster-ns", "other-cluster", "test-cluster-ns", offUpdateMode, offUpdateMode)
