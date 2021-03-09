@@ -2,7 +2,6 @@ package metrics
 
 import (
 	"context"
-	"github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/scylladb/go-log"
 	"time"
 )
@@ -14,7 +13,6 @@ type Provider interface {
 }
 
 type provider struct {
-	api         v1.API
 	logger      log.Logger
 	defaultStep time.Duration
 }

@@ -32,7 +32,7 @@ spec:
           factor: 2
         - name: "cpu utilization vertical down"
           priority: 1
-          expression: "avg(scylla_reactor_utilization{scylla_cluster=\"simple-cluster\", scylla_datacenter=\"us-east-1\", scylla_rack=\"us-east-1a\"}) < bool 100"
+          expression: "avg(scylla_reactor_utilization{scylla_cluster=\"simple-cluster\", scylla_datacenter=\"us-east-1\", scylla_rack=\"us-east-1a\"}) < bool 5"
           mode: "Vertical"
           for: 10s
           factor: 1.5

@@ -172,8 +172,24 @@ type ScyllaClusterAutoscalerStatus struct {
 	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
 
 	// +optional
+	UpdateStatus *UpdateStatus `json:"updateStatus,omitempty"`
+
+	// +optional
 	Recommendations *ScyllaClusterRecommendations `json:"recommendations,omitempty"`
 }
+
+// +kubebuilder:validation:Enum=Ok;TargetFetchFail;TargetNotReady;RecommendationsFail
+type UpdateStatus string
+
+const (
+	UpdateStatusOk UpdateStatus = "Ok"
+
+	UpdateStatusTargetFetchFail UpdateStatus = "TargetFetchFail"
+
+	UpdateStatusTargetNotReady UpdateStatus = "TargetNotReady"
+
+	UpdateStatusRecommendationsFail UpdateStatus = "RecommendationsFail"
+)
 
 type ScyllaClusterRecommendations struct {
 	// +optional

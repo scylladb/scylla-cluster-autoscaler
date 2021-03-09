@@ -17,6 +17,7 @@ import (
 
 type prometheusProvider struct {
 	provider
+	api v1.API
 }
 
 const (
@@ -31,10 +32,10 @@ func NewPrometheusProvider(ctx context.Context, c client.Client, logger log.Logg
 
 	return &prometheusProvider{
 		provider: provider{
-			api:         v1.NewAPI(*promClient),
 			logger:      logger,
 			defaultStep: defaultStep,
 		},
+		api: v1.NewAPI(*promClient),
 	}, nil
 }
 
