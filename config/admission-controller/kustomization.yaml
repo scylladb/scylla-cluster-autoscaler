@@ -1,7 +1,11 @@
 resources:
 - admission_controller.yaml
+- rbac
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: admission-controller
   newName: scyllazimnx/scylla-operator-autoscaler-admission-controller
+- name: scylla-operator-autoscaler-admission-controller
+  newName: scyllazimnx/scylla-operator-autoscaler-admission-controller
+  newTag: latest
