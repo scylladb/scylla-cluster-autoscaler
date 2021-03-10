@@ -3,7 +3,7 @@ TAG		    		?= $(shell git describe --tags --always --abbrev=0)
 IMG_PREFIX		    ?= scylla-operator-autoscaler-
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS         ?= "crd:trivialVersions=true"
+CRD_OPTIONS         ?= "crd:trivialVersions=true,allowDangerousTypes=true"
 
 .EXPORT_ALL_VARIABLES:
 GOVERSION               		:= $(shell go version)

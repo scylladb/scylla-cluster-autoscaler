@@ -36,9 +36,9 @@ func main() {
 
 	var rootCmd = &cobra.Command{}
 	rootCmd.AddCommand(
-		newRecommenderCmd(ctx, logger, atom),
+		newRecommenderCmd(ctx, logger),
 	)
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error(context.Background(), "Root command: a fatal error occured", "error", err)
+		logger.Fatal(ctx, "root command", "error", err)
 	}
 }

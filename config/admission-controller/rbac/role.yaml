@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:admission-controller-role
+rules:
+  - apiGroups:
+      - scylla.scylladb.com
+    resources:
+      - scyllaclusterautoscalers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - scylla.scylladb.com
+    resources:
+      - scyllaclusterautoscalers/status
+    verbs:
+      - get
+  - apiGroups:
+      - scylla.scylladb.com
+    resources:
+      - scyllaclusters
+    verbs:
+      - get
+      - list
+      - watch
+

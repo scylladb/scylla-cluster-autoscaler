@@ -6,7 +6,6 @@ resources:
   - namespace.yaml
   - ../recommender
   - ../updater
-  - ../rbac
   - ../crd
   - ../webhook
   - ../certmanager

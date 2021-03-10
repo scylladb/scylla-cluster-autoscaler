@@ -21,8 +21,8 @@ spec:
             - /recommender
           args:
             - recommender
-            - --prometheusAddress=http://scylla-prom-prometheus-server.monitoring.svc.cluster.local
-            - --interval=60s
+            - --metrics-interval=60s
+            - --metrics-selector-set=app=prometheus,component=server,release=scylla-prom
           image: recommender:latest
           imagePullPolicy: Always
           name: recommender
