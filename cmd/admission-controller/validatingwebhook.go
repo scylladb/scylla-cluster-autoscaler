@@ -63,16 +63,8 @@ func validateClusterChanges(ctx context.Context, logger log.Logger, cluster *scy
 				return fmt.Errorf("changing members is forbidden while cluster is administered by autoscaler")
 			}
 
-			if rack.Storage.Capacity != oldRack.Storage.Capacity {
-				return fmt.Errorf("changing storage.capacity is forbidden while cluster is administered by autoscaler")
-			}
-
 			if !rack.Resources.Requests.Cpu().Equal(*oldRack.Resources.Requests.Cpu()) {
 				return fmt.Errorf("changing requests.cpu is forbidden while cluster is administered by autoscaler")
-			}
-
-			if !rack.Resources.Requests.Memory().Equal(*oldRack.Resources.Requests.Memory()) {
-				return fmt.Errorf("changing requests.memory is forbidden while cluster is administered by autoscaler")
 			}
 		}
 	}
