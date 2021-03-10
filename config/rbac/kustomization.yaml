@@ -3,4 +3,6 @@ resources:
 - scylla_cluster_autoscaler_role_binding.yaml
 - scylla_cluster_role.yaml
 - scylla_cluster_role_binding.yaml
-- serviceaccount.yaml
+- updater_service_account.yaml
+- recommender_service_account.yaml
+- admission_controller_service_account.yaml

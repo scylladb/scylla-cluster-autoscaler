@@ -11,5 +11,8 @@ subjects:
     name: updater-service-account
     namespace: system
   - kind: ServiceAccount
-    name: default
+    name: recommender-service-account
+    namespace: system
+  - kind: ServiceAccount
+    name: admission-controller-service-account
     namespace: system

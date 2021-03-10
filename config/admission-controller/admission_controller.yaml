@@ -15,6 +15,7 @@ spec:
       labels:
         control-plane: admission-controller
     spec:
+      serviceAccountName: admission-controller-service-account
       containers:
         - command:
             - /admission-controller
