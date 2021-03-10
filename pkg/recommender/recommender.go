@@ -7,6 +7,7 @@ import (
 	"github.com/scylladb/go-log"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/recommender/metrics"
+	rutil "github.com/scylladb/scylla-operator-autoscaler/pkg/recommender/util"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/util"
 	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +20,8 @@ import (
 
 type Recommender interface {
 	RunOnce(ctx context.Context) error
+	/*SetMetricsProviderFakeAPI(api metrics.MockApi)
+	QueryMetricsProvider(ctx context.Context, expression string) (bool, error)*/
 }
 
 type recommender struct {
@@ -46,19 +49,18 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 		return errors.Wrap(err, "fetch SCAs")
 	}
 
-	for idx, _ := range scas.Items {
-		sca := &scas.Items[idx]
+	for _, sca := range scas.Items {
 		targetRef := sca.Spec.TargetRef
 		sc, err := r.fetchScyllaCluster(ctx, targetRef.Name, targetRef.Namespace)
 		if err != nil {
 			r.logger.Error(ctx, "fetch target", "sca", sca.Name, "namespace", sca.Namespace, "error", err)
-			r.updateSCAStatus(ctx, sca, v1alpha1.UpdateStatusTargetFetchFail, nil)
+			r.updateSCAStatus(ctx, &sca, v1alpha1.UpdateStatusTargetFetchFail, nil)
 			continue
 		}
 
 		if !isScyllaClusterReady(sc) {
 			r.logger.Error(ctx, "target readiness check", "sca", sca.Name, "namespace", sca.Namespace)
-			r.updateSCAStatus(ctx, sca, v1alpha1.UpdateStatusTargetNotReady, nil)
+			r.updateSCAStatus(ctx, &sca, v1alpha1.UpdateStatusTargetNotReady, nil)
 			continue
 		}
 
@@ -68,10 +70,18 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 			r.logger.Error(ctx, "prepare recommendations", "sca", sca.Name, "namespace", sca.Namespace, "error", err)
 			status = v1alpha1.UpdateStatusRecommendationsFail
 		}
-		r.updateSCAStatus(ctx, sca, status, recommendations)
+		r.updateSCAStatus(ctx, &sca, status, recommendations)
 	}
 
 	return nil
+}
+
+func (r *recommender) QueryMetricsProvider(ctx context.Context, expression string) (bool, error) {
+	return r.metricsProvider.Query(ctx, expression)
+}
+
+func (r *recommender) RangedQueryMetricsProvider(ctx context.Context, expression string, duration time.Duration, argStep *time.Duration) (bool, error) {
+	return r.metricsProvider.RangedQuery(ctx, expression, duration, argStep)
 }
 
 func (r *recommender) updateSCAStatus(ctx context.Context, sca *v1alpha1.ScyllaClusterAutoscaler, status v1alpha1.UpdateStatus, recommendations *v1alpha1.ScyllaClusterRecommendations) {
@@ -119,8 +129,8 @@ func isScyllaClusterReady(sc *scyllav1.ScyllaCluster) bool {
 
 func (r *recommender) getScyllaClusterRecommendations(ctx context.Context, sc *scyllav1.ScyllaCluster, scalingPolicy *v1alpha1.ScalingPolicy) (*v1alpha1.ScyllaClusterRecommendations, error) {
 	var datacenterRecommendations []v1alpha1.DatacenterRecommendations
+	datacenter := sc.Spec.Datacenter
 	for _, datacenterScalingPolicy := range scalingPolicy.Datacenters {
-		datacenter := sc.Spec.Datacenter
 		if datacenterScalingPolicy.Name != datacenter.Name {
 			return nil, errors.New(fmt.Sprintf("datacenter \"%s\" not found", datacenterScalingPolicy.Name))
 		}
@@ -213,7 +223,7 @@ func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1
 				min = scalingPolicy.MemberPolicy.MinAllowed
 			}
 
-			members = calculateMembers(rack.Members, min, max, rule.ScalingFactor)
+			members = rutil.CalculateMembers(rack.Members, min, max, rule.ScalingFactor)
 		} else {
 			if rack.Resources.Requests == nil || rack.Resources.Requests.Cpu() == nil {
 				return nil, errors.New("cpu requests undefined")
@@ -224,11 +234,11 @@ func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1
 				min = scalingPolicy.ResourcePolicy.MinAllowedCpu
 				max = scalingPolicy.ResourcePolicy.MaxAllowedCpu
 			}
-			resources.Requests[corev1.ResourceCPU] = calculateCPU(rack.Resources.Requests.Cpu(), min, max, rule.ScalingFactor)
+			resources.Requests[corev1.ResourceCPU] = rutil.CalculateCPU(rack.Resources.Requests.Cpu(), min, max, rule.ScalingFactor)
 
 			if rack.Resources.Limits != nil && rack.Resources.Limits.Cpu() != nil {
 				if scalingPolicy.ResourcePolicy.RackControlledValues == v1alpha1.RackControlledValuesRequestsAndLimits {
-					resources.Limits[corev1.ResourceCPU] = calculateCPU(rack.Resources.Limits.Cpu(), min, max, rule.ScalingFactor)
+					resources.Limits[corev1.ResourceCPU] = rutil.CalculateCPU(rack.Resources.Limits.Cpu(), min, max, rule.ScalingFactor)
 				} else {
 					resources.Requests[corev1.ResourceCPU] = util.MinQuantity(resources.Requests[corev1.ResourceCPU], resources.Limits[corev1.ResourceCPU])
 				}
@@ -244,40 +254,4 @@ func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1
 	}
 
 	return nil, nil
-}
-
-func calculateMembers(current int32, min, max *int32, factor float64) int32 {
-	val := int32(factor * float64(current))
-
-	if max != nil {
-		val = util.MinInt32(val, *max)
-	}
-
-	if min != nil {
-		val = util.MaxInt32(val, *min)
-	}
-
-	return val
-}
-
-func calculateCPU(current, min, max *resource.Quantity, factor float64) resource.Quantity {
-	var val resource.Quantity
-
-	// TODO keep original scale???
-	// TODO check if this makes any sense
-	if current.Value() > (math.MaxInt64 / 1000) {
-		val = *resource.NewQuantity(int64(factor*float64(current.Value())), current.Format)
-	} else {
-		val = *resource.NewMilliQuantity(int64(factor*float64(current.ScaledValue(resource.Milli))), current.Format)
-	}
-
-	if max != nil {
-		val = util.MinQuantity(val, *max)
-	}
-
-	if min != nil {
-		val = util.MaxQuantity(val, *min)
-	}
-
-	return val
 }

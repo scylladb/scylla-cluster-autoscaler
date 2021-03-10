@@ -39,6 +39,20 @@ func NewPrometheusProvider(ctx context.Context, c client.Client, logger log.Logg
 	}, nil
 }
 
+// TODO move to export_
+/*func (p *prometheusProvider) SetApi(api MockApi) {
+	p.api = &api
+}
+
+func GetEmptyPrometheusProvider(logger log.Logger) *prometheusProvider {
+	return &prometheusProvider{
+		provider: provider{
+			logger:      logger,
+		},
+		api: nil,
+	}
+}*/
+
 func discover(ctx context.Context, c client.Client, selector map[string]string) (*api.Client, error) {
 	svcList := &corev1.ServiceList{}
 	err := c.List(ctx, svcList, &client.ListOptions{
