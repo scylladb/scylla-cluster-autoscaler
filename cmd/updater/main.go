@@ -35,9 +35,9 @@ func main() {
 
 	var rootCmd = &cobra.Command{}
 	rootCmd.AddCommand(
-		newUpdaterCmd(ctx, logger, atom),
+		newUpdaterCmd(ctx, logger),
 	)
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error(context.Background(), "Root command: a fatal error occured", "error", err)
+		logger.Fatal(ctx, "root command", "error", err)
 	}
 }
