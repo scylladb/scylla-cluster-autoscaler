@@ -42,7 +42,7 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 		return errors.Wrap(err, "fetch SCAs")
 	}
 
-	for idx, _ := range scas.Items {
+	for idx := range scas.Items {
 		sca := &scas.Items[idx]
 		targetRef := sca.Spec.TargetRef
 

@@ -6,6 +6,8 @@
 *.dylib
 bin
 dist
+recommender
+updater
 
 # Test binary, build with `go test -c`
 *.test
