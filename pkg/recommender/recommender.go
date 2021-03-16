@@ -21,7 +21,7 @@ import (
 type Recommender interface {
 	RunOnce(ctx context.Context) error
 	/*SetMetricsProviderFakeAPI(api metrics.MockApi)
-	QueryMetricsProvider(ctx context.Context, expression string) (bool, error)*/
+	ExportedQueryOnMetricsProvider(ctx context.Context, expression string) (bool, error)*/
 }
 
 type recommender struct {
@@ -76,12 +76,16 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 	return nil
 }
 
-func (r *recommender) QueryMetricsProvider(ctx context.Context, expression string) (bool, error) {
+func (r *recommender) ExportedQueryOnMetricsProvider(ctx context.Context, expression string) (bool, error) {
 	return r.metricsProvider.Query(ctx, expression)
 }
 
-func (r *recommender) RangedQueryMetricsProvider(ctx context.Context, expression string, duration time.Duration, argStep *time.Duration) (bool, error) {
+func (r *recommender) ExportedRangedQueryOnMetricsProvider(ctx context.Context, expression string, duration time.Duration, argStep *time.Duration) (bool, error) {
 	return r.metricsProvider.RangedQuery(ctx, expression, duration, argStep)
+}
+
+func (r *recommender) ExportedGetRackRecommendations(ctx context.Context, rack *scyllav1.RackSpec, scalingPolicy *v1alpha1.RackScalingPolicy) (*v1alpha1.RackRecommendations, error) {
+	return r.getRackRecommendations(ctx, rack, scalingPolicy)
 }
 
 func (r *recommender) updateSCAStatus(ctx context.Context, sca *v1alpha1.ScyllaClusterAutoscaler, status v1alpha1.UpdateStatus, recommendations *v1alpha1.ScyllaClusterRecommendations) {
@@ -186,6 +190,11 @@ func (r *recommender) getDatacenterRecommendations(ctx context.Context, datacent
 }
 
 func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1.RackSpec, scalingPolicy *v1alpha1.RackScalingPolicy) (*v1alpha1.RackRecommendations, error) {
+	if scalingPolicy == nil {
+		return nil, errors.New("scaling policy not defined")
+	} else if rack == nil {
+		return nil, errors.New("rack spec not defined")
+	}
 	var err error
 	var priority int32 = math.MaxInt32
 	members := rack.Members
@@ -224,6 +233,7 @@ func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1
 			}
 
 			members = rutil.CalculateMembers(rack.Members, min, max, rule.ScalingFactor)
+			resources = rack.Resources
 		} else {
 			if rack.Resources.Requests == nil || rack.Resources.Requests.Cpu() == nil {
 				return nil, errors.New("cpu requests undefined")
@@ -243,6 +253,7 @@ func (r *recommender) getRackRecommendations(ctx context.Context, rack *scyllav1
 					resources.Requests[corev1.ResourceCPU] = util.MinQuantity(resources.Requests[corev1.ResourceCPU], resources.Limits[corev1.ResourceCPU])
 				}
 			}
+			members = rack.Members
 		}
 
 		priority = rule.Priority

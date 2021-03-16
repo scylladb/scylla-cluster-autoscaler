@@ -5,44 +5,25 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
-	"math"
 	"time"
 )
-// TODO add to vendor
+
 type MockApi struct {}
 
-var Q = func() (model.Value, v1.Warnings, error) {
-	res := model.Vector{
-		{
-			Metric: model.Metric{
-				"label_name_1.1": "label_value_1.1",
-				"label_name_1.2": "label_value_1.2",
-			},
-			Value: model.SampleValue(1),
-			Timestamp: model.Time(math.MinInt64),
-		},
-		{
-			Metric: model.Metric{
-				"label_name_2.1": "label_value_2.1",
-				"label_name_2.2": "label_value_2.2",
-			},
-			Value: model.SampleValue(2),
-			Timestamp: model.Time(math.MaxInt64),
-		},
-	}
-	return res, []string{}, nil
+var Q = func(query string, ts time.Time) (model.Value, v1.Warnings, error) {
+	return nil, []string{},  errors.New("Query function in mock_prometheus_api not implemented")
 }
 
-var Qr = func() (model.Value, v1.Warnings, error) {
-	return nil, []string{}, errors.New("halkooo QueryRange error")
+var Qr = func(query string, r v1.Range) (model.Value, v1.Warnings, error) {
+	return nil, []string{}, errors.New("QueryRange function in mock_prometheus_api not implemented")
 }
 
 func (f *MockApi) Query(ctx context.Context, query string, ts time.Time) (model.Value, v1.Warnings, error) {
-	return Q()
+	return Q(query, ts)
 }
 
 func (f *MockApi) QueryRange(ctx context.Context, query string, r v1.Range) (model.Value, v1.Warnings, error) {
-	return Qr()
+	return Qr(query, r)
 }
 
 func (f *MockApi) Alerts(ctx context.Context) (v1.AlertsResult, error) {
