@@ -26,7 +26,7 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme)
 }
 
-func NewSingleDcSca(scaMeta *metav1.ObjectMeta , updateMode *v1alpha1.UpdateMode, targetClusterMeta *metav1.ObjectMeta,
+func NewSingleDcSca(scaMeta *metav1.ObjectMeta, updateMode *v1alpha1.UpdateMode, targetClusterMeta *metav1.ObjectMeta,
 	dcName string, rackRecs []v1alpha1.RackRecommendations) *v1alpha1.ScyllaClusterAutoscaler {
 	return &v1alpha1.ScyllaClusterAutoscaler{
 		ObjectMeta: *scaMeta,
@@ -54,11 +54,11 @@ func NewSingleDcSca(scaMeta *metav1.ObjectMeta , updateMode *v1alpha1.UpdateMode
 
 func NewSingleDcScyllaCluster(clusterMeta *metav1.ObjectMeta, dcName string, racksSpec []scyllav1.RackSpec,
 	racksStatus map[string]scyllav1.RackStatus) *scyllav1.ScyllaCluster {
-	return 	&scyllav1.ScyllaCluster{
+	return &scyllav1.ScyllaCluster{
 		ObjectMeta: *clusterMeta,
 		Spec: scyllav1.ClusterSpec{
 			Datacenter: scyllav1.DatacenterSpec{
-				Name: dcName,
+				Name:  dcName,
 				Racks: racksSpec,
 			},
 		},
@@ -69,7 +69,7 @@ func NewSingleDcScyllaCluster(clusterMeta *metav1.ObjectMeta, dcName string, rac
 }
 
 type ExpectedStateSpec struct {
-	Name string
+	Name                 string
 	ExpectedMembersValue int32
 }
 
@@ -95,78 +95,78 @@ func TestUpdater(t *testing.T) {
 		Name:      "test-off-sca",
 		Namespace: "test-sca-ns",
 	}
-	tests := []struct{
-		Name string
-		ScyllaCluster *scyllav1.ScyllaCluster
-		Sca *v1alpha1.ScyllaClusterAutoscaler
+	tests := []struct {
+		Name           string
+		ScyllaCluster  *scyllav1.ScyllaCluster
+		Sca            *v1alpha1.ScyllaClusterAutoscaler
 		ExpectedStates []ExpectedStateSpec
 	}{
 		{
 			Name: "applied recommendation",
 			ScyllaCluster: NewSingleDcScyllaCluster(basicTestClusterMeta, "test-dc",
 				[]scyllav1.RackSpec{
-						{ Name: "test-rack-1", Members: 1 },
+					{Name: "test-rack-1", Members: 1},
 				},
 				map[string]scyllav1.RackStatus{
-					"test-rack-1": { Members: 1, ReadyMembers: 1 },
+					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
 			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta, "test-dc",
 				[]v1alpha1.RackRecommendations{
-					{ Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{ Target: 2 } },
+					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 2}},
 				}),
 			ExpectedStates: []ExpectedStateSpec{
-				{ Name: "test-rack-1", ExpectedMembersValue: 2 },
+				{Name: "test-rack-1", ExpectedMembersValue: 2},
 			},
 		},
 		{
 			Name: "requested members not equal to ready",
 			ScyllaCluster: NewSingleDcScyllaCluster(basicTestClusterMeta, "test-dc",
 				[]scyllav1.RackSpec{
-					{ Name: "test-rack-1", Members: 2 },
+					{Name: "test-rack-1", Members: 2},
 				},
 				map[string]scyllav1.RackStatus{
-					"test-rack-1": { Members: 2, ReadyMembers: 1 },
+					"test-rack-1": {Members: 2, ReadyMembers: 1},
 				}),
 			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta, "test-dc",
 				[]v1alpha1.RackRecommendations{
-					{ Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{ Target: 3 } },
+					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 3}},
 				}),
 			ExpectedStates: []ExpectedStateSpec{
-				{ Name: "test-rack-1", ExpectedMembersValue: 2 },
+				{Name: "test-rack-1", ExpectedMembersValue: 2},
 			},
 		},
 		{
 			Name: "target members equal to spec members, but not to status members",
 			ScyllaCluster: NewSingleDcScyllaCluster(basicTestClusterMeta, "test-dc",
 				[]scyllav1.RackSpec{
-					{ Name: "test-rack-1", Members: 2 },
+					{Name: "test-rack-1", Members: 2},
 				},
 				map[string]scyllav1.RackStatus{
-					"test-rack-1": { Members: 1, ReadyMembers: 1 },
+					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
 			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta, "test-dc",
 				[]v1alpha1.RackRecommendations{
-					{ Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{ Target: 2 } },
+					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 2}},
 				}),
 			ExpectedStates: []ExpectedStateSpec{
-				{ Name: "test-rack-1", ExpectedMembersValue: 2 },
+				{Name: "test-rack-1", ExpectedMembersValue: 2},
 			},
 		},
 		{
 			Name: "off mode sca",
 			ScyllaCluster: NewSingleDcScyllaCluster(basicTestClusterMeta, "test-dc",
 				[]scyllav1.RackSpec{
-					{ Name: "test-rack-1", Members: 1 },
+					{Name: "test-rack-1", Members: 1},
 				},
 				map[string]scyllav1.RackStatus{
-					"test-rack-1": { Members: 1, ReadyMembers: 1 },
+					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
 			Sca: NewSingleDcSca(basicTestOffModeScaMeta, &offUpdateMode, basicTestClusterMeta, "test-dc",
 				[]v1alpha1.RackRecommendations{
-					{ Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{ Target: 2 } },
+					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 2}},
 				}),
 			ExpectedStates: []ExpectedStateSpec{
-				{ Name: "test-rack-1", ExpectedMembersValue: 1 },
+				{Name: "test-rack-1", ExpectedMembersValue: 1},
 			},
 		},
 	}

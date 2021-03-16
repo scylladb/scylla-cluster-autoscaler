@@ -1,27 +1,60 @@
+# Copyright (C) 2021 ScyllaDB
 name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - 'master'
   pull_request:
-    branches: [ master ]
+    branches:
+      - '**'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  go_version: 1.15.7
 
 jobs:
-  build:
-    name: Go-test
-    runs-on: ubuntu-latest
+  verify:
+    name: Verify
+    runs-on: ubuntu-20.04
     steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-
-      - name: Set up go environment
+      - name: Setup go
         uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go_version }}
+      - uses: actions/checkout@v2
+      - name: Verify
+        run: make verify --warn-undefined-variables
 
-      - name: Code Formatting
-        run: make fmt
+  verify-deps:
+    name: Verify dependencies
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go_version }}
+      - uses: actions/checkout@v2
+      - name: Verify dependencies
+        run: make verify-deps --warn-undefined-variables
 
-      - name: Code Inspection
-        run: make vet
-
-      - name: Unit Tests
-        run: make test
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go_version }}
+      - uses: actions/checkout@v2
+      - name: Build
+        run: make --warn-undefined-variables
+      - name: Make sure new unit tests aren't flaky
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo "GO_TEST_COUNT=-count=3" | tee -a ${GITHUB_ENV}
+      - name: Test
+        run: make test --warn-undefined-variables
