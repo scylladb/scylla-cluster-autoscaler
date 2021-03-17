@@ -174,7 +174,7 @@ define build-image
 
 endef
 
-images: build
+images:
 	$(foreach bin,$(BINARIES),$(call build-image,$(bin)))
 .PHONY: images
 
