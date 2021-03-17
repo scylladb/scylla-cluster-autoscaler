@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - command:
-            - /updater
+            - /usr/bin/updater
           args:
             - updater
             - --interval=120s
