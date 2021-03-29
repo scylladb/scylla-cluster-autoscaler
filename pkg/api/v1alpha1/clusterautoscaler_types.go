@@ -17,7 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,10 +50,8 @@ type ScyllaClusterAutoscalerSpec struct {
 	TargetRef *TargetRef `json:"targetRef"`
 
 	// +optional
+	// +kubebuilder:default:={"updateMode":"Auto"}
 	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
-
-	// +optional
-	ScalingRuleGroups map[string]ScalingRuleGroup `json:"scalingRuleGroups,omitempty"`
 
 	// +optional
 	ScalingPolicy *ScalingPolicy `json:"scalingPolicy,omitempty"`
@@ -66,77 +65,138 @@ type TargetRef struct {
 
 type UpdatePolicy struct {
 	// +optional
-	UpdateMode *UpdateMode `json:"updateMode,omitempty"`
+	// +kubebuilder:default:=Auto
+	UpdateMode UpdateMode `json:"updateMode"`
 }
 
-type ScalingRuleGroup struct {
-	Rules []ScalingRule `json:"rules"`
-}
-
-type ScalingRule struct {
-	Name      string            `json:"name"`
-	Metric    string            `json:"metric"`
-	Labels    map[string]string `json:"labels"`
-	Threshold float64           `json:"threshold"`
-	Instances int32             `json:"instances"`
-}
-
-type ScalingPolicy struct {
-	// +optional
-	Datacenters []DataCenterScalingPolicy `json:"datacenters,omitempty"`
-}
-
-type DataCenterScalingPolicy struct {
-	Name string `json:"name"`
-	// +optional
-	RackScalingPolicies []RackScalingPolicy `json:"racks,omitempty"`
-}
-
-type RackScalingPolicy struct {
-	Name string `json:"name"`
-	// +optional
-	MinMembers *int `json:"minMembers,omitempty"`
-
-	// +optional
-	MaxMembers *int `json:"maxMembers,omitempty"`
-
-	// +optional
-	RackResourcePolicy *RackResourcePolicy `json:"resourcePolicy,omitempty"`
-
-	ScalingRuleGroup string `json:"scalingRuleGroup"`
-}
-
-type RackResourcePolicy struct {
-	// +optional
-	MinAllowed v1.ResourceList `json:"minAllowed,omitempty"`
-
-	// +optional
-	MaxAllowed v1.ResourceList `json:"maxAllowed,omitempty"`
-}
-
-// +kubebuilder:validation:Enum=Off;Initial;Auto
+// +kubebuilder:validation:Enum=Off;Auto
 type UpdateMode string
 
 const (
 	UpdateModeOff UpdateMode = "Off"
 
-	UpdateModeInitial UpdateMode = "Initial"
-
 	UpdateModeAuto UpdateMode = "Auto"
+)
+
+type ScalingPolicy struct {
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Datacenters []DatacenterScalingPolicy `json:"datacenters,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+type DatacenterScalingPolicy struct {
+	Name string `json:"name"`
+
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	RackScalingPolicies []RackScalingPolicy `json:"racks,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+type RackScalingPolicy struct {
+	Name string `json:"name"`
+
+	// +optional
+	MemberPolicy *RackMemberPolicy `json:"memberPolicy,omitempty"`
+
+	// +optional
+	ResourcePolicy *RackResourcePolicy `json:"resourcePolicy,omitempty"`
+
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	ScalingRules []ScalingRule `json:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+}
+
+type RackMemberPolicy struct {
+	// +optional
+	MinAllowed *int32 `json:"minAllowed,omitempty"`
+
+	// +optional
+	MaxAllowed *int32 `json:"maxAllowed,omitempty"`
+}
+
+type RackResourcePolicy struct {
+	// +optional
+	MinAllowedCpu *resource.Quantity `json:"minAllowedCpu,omitempty"`
+
+	// +optional
+	MaxAllowedCpu *resource.Quantity `json:"maxAllowedCpu,omitempty"`
+
+	// +optional
+	// +kubebuilder:default:=RequestsAndLimits
+	RackControlledValues RackControlledValues `json:"controlledValues"`
+}
+
+// +kubebuilder:validation:Enum=Requests;RequestsAndLimits
+type RackControlledValues string
+
+const (
+	RackControlledValuesRequests RackControlledValues = "Requests"
+
+	RackControlledValuesRequestsAndLimits RackControlledValues = "RequestsAndLimits"
+)
+
+type ScalingRule struct {
+	Name string `json:"name"`
+
+	// +kubebuilder:validation:Minimum=0
+	Priority int32 `json:"priority"`
+
+	Expression string `json:"expression"`
+
+	// +optional
+	For *metav1.Duration `json:"for"`
+
+	// +optional
+	Step *metav1.Duration `json:"step"`
+
+	ScalingMode ScalingMode `json:"mode"`
+
+	ScalingFactor float64 `json:"factor"`
+}
+
+// +kubebuilder:validation:Enum=Horizontal;Vertical
+type ScalingMode string
+
+const (
+	ScalingModeHorizontal ScalingMode = "Horizontal"
+
+	ScalingModeVertical ScalingMode = "Vertical"
 )
 
 // ScyllaClusterAutoscalerStatus defines the observed state of ScyllaClusterAutoscaler
 type ScyllaClusterAutoscalerStatus struct {
 	// +optional
+	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
+
+	// +optional
+	UpdateStatus *UpdateStatus `json:"updateStatus,omitempty"`
+
+	// +optional
 	Recommendations *ScyllaClusterRecommendations `json:"recommendations,omitempty"`
 }
 
+// +kubebuilder:validation:Enum=Ok;TargetFetchFail;TargetNotReady;RecommendationsFail
+type UpdateStatus string
+
+const (
+	UpdateStatusOk UpdateStatus = "Ok"
+
+	UpdateStatusTargetFetchFail UpdateStatus = "TargetFetchFail"
+
+	UpdateStatusTargetNotReady UpdateStatus = "TargetNotReady"
+
+	UpdateStatusRecommendationsFail UpdateStatus = "RecommendationsFail"
+)
+
 type ScyllaClusterRecommendations struct {
 	// +optional
-	DataCenterRecommendations []DataCenterRecommendations `json:"dataCenterRecommendations,omitempty"`
+	DatacenterRecommendations []DatacenterRecommendations `json:"datacenterRecommendations,omitempty"`
 }
 
-type DataCenterRecommendations struct {
+type DatacenterRecommendations struct {
 	Name string `json:"name"`
 
 	// +optional
@@ -147,18 +207,10 @@ type RackRecommendations struct {
 	Name string `json:"name"`
 
 	// +optional
-	Members *RecommendedRackMembers `json:"members,omitempty"`
+	Members *int32 `json:"members,omitempty"`
 
 	// +optional
-	Resources *RecommendedRackResources `json:"resources,omitempty"`
-}
-
-type RecommendedRackMembers struct {
-	Target int32 `json:"target,omitempty"`
-}
-
-type RecommendedRackResources struct {
-	Target v1.ResourceList `json:"target,omitempty"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 func init() {

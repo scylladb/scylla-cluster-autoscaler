@@ -1,0 +1,45 @@
+apiVersion: scylla.scylladb.com/v1alpha1
+kind: ScyllaClusterAutoscaler
+metadata:
+  name: simple-sca
+spec:
+  targetRef:
+    namespace: scylla
+    name: simple-cluster
+  scalingPolicy:
+    datacenters:
+    - name: us-east-1
+      racks:
+      - name: us-east-1a
+        rules:
+        - name: "cpu utilization horizontal up"
+          priority: 2
+          expression: "avg(scylla_reactor_utilization{scylla_cluster=\"simple-cluster\", scylla_datacenter=\"us-east-1\", scylla_rack=\"us-east-1a\"}) > bool 70"
+          mode: "Horizontal"
+          for: 10s
+          factor: 2
+        - name: "cpu utilization horizontal down"
+          priority: 2
+          expression: "avg(scylla_reactor_utilization{scylla_cluster=\"simple-cluster\", scylla_datacenter=\"us-east-1\", scylla_rack=\"us-east-1a\"}) < bool 5"
+          mode: "Horizontal"
+          for: 10s
+          factor: 0.5
+        - name: "cpu utilization vertical up"
+          priority: 1
+          expression: "avg(scylla_reactor_utilization{scylla_cluster=\"simple-cluster\", scylla_datacenter=\"us-east-1\", scylla_rack=\"us-east-1a\"}) > bool 70"
+          mode: "Vertical"
+          for: 10s
+          factor: 2
+        - name: "cpu utilization vertical down"
+          priority: 1
+          expression: "avg(scylla_reactor_utilization{scylla_cluster=\"simple-cluster\", scylla_datacenter=\"us-east-1\", scylla_rack=\"us-east-1a\"}) < bool 5"
+          mode: "Vertical"
+          for: 10s
+          factor: 0.5
+        memberPolicy:
+          minAllowed: 1
+          maxAllowed: 5
+        resourcePolicy:
+          minAllowedCpu: 100m
+          maxAllowedCpu: 2
+          controlledValues: "Requests"
