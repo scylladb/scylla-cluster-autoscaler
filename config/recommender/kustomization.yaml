@@ -6,3 +6,4 @@ kind: Kustomization
 images:
 - name: recommender
   newName: scyllazimnx/scylla-operator-autoscaler-recommender
+  newTag: latest

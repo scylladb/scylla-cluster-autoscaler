@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/scylladb/go-log"
 	scyllav1 "github.com/scylladb/scylla-operator/pkg/api/v1"
 	"github.com/spf13/cobra"

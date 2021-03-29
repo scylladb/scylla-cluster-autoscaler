@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-controller
+  namespace: system
+  labels:
+    control-plane: admission-controller
+spec:
+  selector:
+    matchLabels:
+      control-plane: admission-controller
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: admission-controller
+    spec:
+      serviceAccountName: admission-controller-service-account
+      containers:
+        - command:
+            - /usr/bin/admission-controller
+          args:
+            - admission-controller
+          image: admission-controller:latest
+          imagePullPolicy: Always
+          name: admission-controller
+          resources:
+            requests:
+              cpu: 20m
+              memory: 20Mi
+          ports:
+            - containerPort: 9443
+              name: webhook
+      terminationGracePeriodSeconds: 10
