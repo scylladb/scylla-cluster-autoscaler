@@ -24,15 +24,15 @@ func NewUpdater(c client.Client, logger log.Logger) Updater {
 	}
 }
 
-func getDataCenterRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler) []v1alpha1.DataCenterRecommendations {
+func getDatacenterRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler) []v1alpha1.DatacenterRecommendations {
 	if sca.Status.Recommendations == nil {
 		return nil
 	}
 
-	return sca.Status.Recommendations.DataCenterRecommendations
+	return sca.Status.Recommendations.DatacenterRecommendations
 }
 
-func getRackRecommendations(dataCenterName string, dcRecs []v1alpha1.DataCenterRecommendations) []v1alpha1.RackRecommendations {
+func getRackRecommendations(dataCenterName string, dcRecs []v1alpha1.DatacenterRecommendations) []v1alpha1.RackRecommendations {
 	for idx := range dcRecs {
 		if dcRecs[idx].Name == dataCenterName {
 			return dcRecs[idx].RackRecommendations
@@ -55,8 +55,7 @@ func findRack(rackName string, racks []scyllav1.RackSpec) *scyllav1.RackSpec {
 func filterModeOffScas(scas *v1alpha1.ScyllaClusterAutoscalerList) []v1alpha1.ScyllaClusterAutoscaler {
 	filteredScas := make([]v1alpha1.ScyllaClusterAutoscaler, 0)
 	for _, sca := range scas.Items {
-		if sca.Spec.UpdatePolicy != nil && sca.Spec.UpdatePolicy.UpdateMode != nil &&
-			*sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeAuto {
+		if sca.Spec.UpdatePolicy != nil && sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeAuto {
 			filteredScas = append(filteredScas, sca)
 		}
 	}
@@ -74,7 +73,7 @@ func (u *updater) RunOnce(ctx context.Context) error {
 	for idx := range filteredScas {
 		sca := &filteredScas[idx]
 
-		dcRecs := getDataCenterRecommendations(sca)
+		dcRecs := getDatacenterRecommendations(sca)
 		if dcRecs == nil {
 			u.logger.Debug(ctx, "no data center recommendations for cluster", "cluster", sca.ClusterName)
 			continue
@@ -122,14 +121,14 @@ func (u *updater) RunOnce(ctx context.Context) error {
 				u.logger.Debug(ctx, "not applying recommendation: rack's requested members aren't equal to ready",
 					"rack", rack.Name, "requested members", requestedMembers, "ready members", readyMembers)
 				continue
-			} else if rack.Members == rackRec.Members.Target {
+			} else if rack.Members == *rackRec.Members {
 				u.logger.Debug(ctx, "not applying recommendation: rack's spec members are equal to target",
 					"rack", rack.Name, "requested members", requestedMembers,
-					"target members", rackRec.Members.Target)
+					"target members", *rackRec.Members)
 				continue
 			}
 
-			rack.Members = rackRec.Members.Target
+			rack.Members = *rackRec.Members
 			anyRackUpdated = true
 			u.logger.Info(ctx, "members recommendation for rack applied",
 				"rack", rackRec.Name, "members", rack.Members)

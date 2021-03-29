@@ -18,5 +18,5 @@ FROM docker.io/library/ubuntu:20.04
 ARG EXEC_ARG
 ENV EXEC=$EXEC_ARG
 SHELL ["/bin/bash", "-euEo", "pipefail", "-c"]
-COPY --from=builder /go/src/github.com/scylladb/scylla-operator-autoscaler/$EXEC_ARG /usr/bin/
+COPY --from=builder /go/src/github.com/scylladb/scylla-operator-autoscaler/bin/$EXEC_ARG /usr/bin/
 ENTRYPOINT ./usr/bin/$EXEC

@@ -6,10 +6,8 @@ IMAGE_TAG ?= latest
 IMAGE_REPO ?= scyllazimnx
 IMAGE_PREFIX ?= scylla-operator-autoscaler-
 
-BINARIES := recommender updater admission-controller
-
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS         ?= "crd:trivialVersions=true,allowDangerousTypes=true"
+CRD_OPTIONS         ?= "crd:allowDangerousTypes=true"
 
 GIT_TAG ?=$(shell git describe --long --tags --abbrev=7 --match 'v[0-9]*' || echo 'v0.0.0-unknown')
 GIT_COMMIT ?=$(shell git rev-parse --short "HEAD^{commit}" 2>/dev/null)
@@ -31,7 +29,7 @@ GO_BUILD_PACKAGES ?=./cmd/...
 GO_BUILD_PACKAGES_EXPANDED ?=$(shell $(GO) list $(GO_BUILD_PACKAGES))
 go_build_binaries =$(notdir $(GO_BUILD_PACKAGES_EXPANDED))
 GO_BUILD_FLAGS ?=-trimpath
-GO_BUILD_BINDIR ?=
+GO_BUILD_BINDIR ?= bin
 GO_LD_EXTRA_FLAGS ?=
 GO_TEST_PACKAGES :=./pkg/... # ./cmd/...
 GO_TEST_FLAGS ?=-race
@@ -68,7 +66,7 @@ build:
 .PHONY: build
 
 clean:
-	$(RM) $(go_build_binaries)
+	$(foreach bin,$(go_build_binaries),$(RM) $(GO_BUILD_BINDIR)/$(bin))
 .PHONY: clean
 
 verify-govet:
@@ -160,7 +158,7 @@ endef
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
-	$(foreach bin,$(BINARIES),$(call kustomize-subst,$(bin)))
+	$(foreach bin,$(go_build_binaries),$(call kustomize-subst,$(bin)))
 	controller-gen $(CRD_OPTIONS) paths="$(GO_PACKAGES)" output:crd:artifacts:config=config/crd/bases
 .PHONY: manifests
 
@@ -175,7 +173,7 @@ define build-image
 endef
 
 images:
-	$(foreach bin,$(BINARIES),$(call build-image,$(bin)))
+	$(foreach bin,$(go_build_binaries),$(call build-image,$(bin)))
 .PHONY: images
 
 # $1 - binary name
@@ -185,5 +183,5 @@ define docker-push
 endef
 
 push-images:
-	$(foreach bin,$(BINARIES),$(call docker-push,$(bin)))
+	$(foreach bin,$(go_build_binaries),$(call docker-push,$(bin)))
 .PHONY: push-images

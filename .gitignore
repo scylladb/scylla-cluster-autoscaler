@@ -6,9 +6,6 @@
 *.dylib
 bin
 dist
-recommender
-updater
-admission-controller
 
 # Test binary, build with `go test -c`
 *.test

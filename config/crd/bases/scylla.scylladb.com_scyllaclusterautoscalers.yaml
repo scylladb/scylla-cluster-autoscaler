@@ -42,75 +42,76 @@ spec:
                         racks:
                           items:
                             properties:
-                              maxMembers:
-                                type: integer
-                              minMembers:
-                                type: integer
+                              memberPolicy:
+                                properties:
+                                  maxAllowed:
+                                    format: int32
+                                    type: integer
+                                  minAllowed:
+                                    format: int32
+                                    type: integer
+                                type: object
                               name:
                                 type: string
                               resourcePolicy:
                                 properties:
-                                  maxAllowed:
-                                    additionalProperties:
-                                      anyOf:
-                                      - type: integer
-                                      - type: string
-                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                      x-kubernetes-int-or-string: true
-                                    description: ResourceList is a set of (resource name, quantity) pairs.
-                                    type: object
-                                  minAllowed:
-                                    additionalProperties:
-                                      anyOf:
-                                      - type: integer
-                                      - type: string
-                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                      x-kubernetes-int-or-string: true
-                                    description: ResourceList is a set of (resource name, quantity) pairs.
-                                    type: object
+                                  controlledValues:
+                                    default: RequestsAndLimits
+                                    enum:
+                                    - Requests
+                                    - RequestsAndLimits
+                                    type: string
+                                  maxAllowedCpu:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                    x-kubernetes-int-or-string: true
+                                  minAllowedCpu:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                    x-kubernetes-int-or-string: true
                                 type: object
-                              scalingRuleGroup:
-                                type: string
+                              rules:
+                                items:
+                                  properties:
+                                    expression:
+                                      type: string
+                                    factor:
+                                      type: number
+                                    for:
+                                      type: string
+                                    mode:
+                                      enum:
+                                      - Horizontal
+                                      - Vertical
+                                      type: string
+                                    name:
+                                      type: string
+                                    priority:
+                                      format: int32
+                                      minimum: 0
+                                      type: integer
+                                    step:
+                                      type: string
+                                  required:
+                                  - expression
+                                  - factor
+                                  - mode
+                                  - name
+                                  - priority
+                                  type: object
+                                type: array
                             required:
                             - name
-                            - scalingRuleGroup
                             type: object
                           type: array
                       required:
                       - name
                       type: object
                     type: array
-                type: object
-              scalingRuleGroups:
-                additionalProperties:
-                  properties:
-                    rules:
-                      items:
-                        properties:
-                          instances:
-                            format: int32
-                            type: integer
-                          labels:
-                            additionalProperties:
-                              type: string
-                            type: object
-                          metric:
-                            type: string
-                          name:
-                            type: string
-                          threshold:
-                            type: number
-                        required:
-                        - instances
-                        - labels
-                        - metric
-                        - name
-                        - threshold
-                        type: object
-                      type: array
-                  required:
-                  - rules
-                  type: object
                 type: object
               targetRef:
                 properties:
@@ -123,11 +124,13 @@ spec:
                 - namespace
                 type: object
               updatePolicy:
+                default:
+                  updateMode: Auto
                 properties:
                   updateMode:
+                    default: Auto
                     enum:
                     - "Off"
-                    - Initial
                     - Auto
                     type: string
                 type: object
@@ -137,9 +140,12 @@ spec:
           status:
             description: ScyllaClusterAutoscalerStatus defines the observed state of ScyllaClusterAutoscaler
             properties:
+              lastUpdated:
+                format: date-time
+                type: string
               recommendations:
                 properties:
-                  dataCenterRecommendations:
+                  datacenterRecommendations:
                     items:
                       properties:
                         name:
@@ -148,23 +154,30 @@ spec:
                           items:
                             properties:
                               members:
-                                properties:
-                                  target:
-                                    format: int32
-                                    type: integer
-                                type: object
+                                format: int32
+                                type: integer
                               name:
                                 type: string
                               resources:
+                                description: ResourceRequirements describes the compute resource requirements.
                                 properties:
-                                  target:
+                                  limits:
                                     additionalProperties:
                                       anyOf:
                                       - type: integer
                                       - type: string
                                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                       x-kubernetes-int-or-string: true
-                                    description: ResourceList is a set of (resource name, quantity) pairs.
+                                    description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                                    type: object
+                                  requests:
+                                    additionalProperties:
+                                      anyOf:
+                                      - type: integer
+                                      - type: string
+                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                      x-kubernetes-int-or-string: true
+                                    description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                                     type: object
                                 type: object
                             required:
@@ -176,6 +189,13 @@ spec:
                       type: object
                     type: array
                 type: object
+              updateStatus:
+                enum:
+                - Ok
+                - TargetFetchFail
+                - TargetNotReady
+                - RecommendationsFail
+                type: string
             type: object
         type: object
     served: true

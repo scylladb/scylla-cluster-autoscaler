@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/pkg/errors"
@@ -18,38 +17,44 @@ import (
 
 type prometheusProvider struct {
 	provider
+	api v1.API
 }
 
-func NewPrometheusProvider(ctx context.Context, c client.Client, logger log.Logger, metricsSelector map[string]string) (Provider, error) {
-	promClient, err := discover(ctx, c, metricsSelector)
+const (
+	maxQueriesInRange = 11000
+)
+
+func NewPrometheusProvider(ctx context.Context, c client.Client, logger log.Logger, selector map[string]string, defaultStep time.Duration) (Provider, error) {
+	promClient, err := discover(ctx, c, selector)
 	if err != nil {
 		return nil, err
 	}
 
 	return &prometheusProvider{
 		provider: provider{
-			api:    v1.NewAPI(*promClient),
-			logger: logger,
+			logger:      logger,
+			defaultStep: defaultStep,
 		},
+		api: v1.NewAPI(*promClient),
 	}, nil
 }
 
-func discover(ctx context.Context, c client.Client, metricsSelector map[string]string) (*api.Client, error) {
+func discover(ctx context.Context, c client.Client, selector map[string]string) (*api.Client, error) {
 	svcList := &corev1.ServiceList{}
 	err := c.List(ctx, svcList, &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(metricsSelector),
+		LabelSelector: labels.SelectorFromSet(selector),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list prometheus services")
 	}
 	if len(svcList.Items) == 0 {
-		return nil, errors.Wrap(err, "no prometheus server found")
+		return nil, errors.New("no prometheus server found")
 	}
 
 	svc := svcList.Items[0]
 	addr := (&url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.cluster.local", svc.Name, svc.Namespace),
+		Host:   fmt.Sprintf("%s.%s.svc.cluster.local:9090", svc.Name, svc.Namespace),
 	}).String()
 
 	promClient, err := api.NewClient(api.Config{Address: addr})
@@ -60,40 +65,66 @@ func discover(ctx context.Context, c client.Client, metricsSelector map[string]s
 	return &promClient, nil
 }
 
-func mapToString(m map[string]string) (string, error) {
-	b := new(bytes.Buffer)
-
-	for key, value := range m {
-		_, err := fmt.Fprintf(b, "%s=\"%s\",", key, value)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	return b.String(), nil
-}
-
-func (p *prometheusProvider) FetchMetric(ctx context.Context, metric string, labels map[string]string) (float64, error) {
-	labelsStr, err := mapToString(labels)
-	if err != nil {
-		return 0, errors.Wrap(err, "convert labels map to string")
-	}
-
-	query := fmt.Sprintf("%s{%s}", metric, labelsStr)
-	result, warnings, err := p.api.Query(ctx, query, time.Now())
+func (p *prometheusProvider) Query(ctx context.Context, expression string) (bool, error) {
+	result, warnings, err := p.api.Query(ctx, expression, time.Now())
 
 	if err != nil {
-		return 0, errors.Wrap(err, "query")
+		return false, errors.Wrap(err, "query")
 	}
 
 	if len(warnings) > 0 {
 		p.logger.Error(ctx, "query", "warnings", warnings)
 	}
 
-	resultVector := result.(model.Vector)
-	if resultVector.Len() == 0 {
-		return 0, errors.New("no results")
+	if result.Type() != model.ValVector {
+		return false, errors.New("unhandled ValueType returned")
 	}
 
-	return float64(resultVector[0].Value), nil
+	resultVector := result.(model.Vector)
+	if resultVector.Len() == 0 {
+		return false, errors.New("no results")
+	}
+
+	return resultVector[0].Value != 0, nil //TODO check all results instead of just the first one???
+}
+
+func (p *prometheusProvider) RangedQuery(ctx context.Context, expression string, duration time.Duration, argStep *time.Duration) (bool, error) {
+	now := time.Now()
+	step := p.defaultStep
+	if argStep != nil {
+		step = *argStep
+	}
+	if duration/step > maxQueriesInRange {
+		step = duration/maxQueriesInRange + 1
+	}
+
+	result, warnings, err := p.api.QueryRange(ctx, expression, v1.Range{Start: now.Add(-duration), End: now, Step: step})
+
+	if err != nil {
+		return false, errors.Wrap(err, "ranged query")
+	}
+
+	if len(warnings) > 0 {
+		p.logger.Error(ctx, "ranged query", "warnings", warnings)
+	}
+
+	if result.Type() != model.ValMatrix {
+		return false, errors.New("unhandled ValueType returned")
+	}
+
+	resultMatrix := result.(model.Matrix)
+	if resultMatrix.Len() == 0 {
+		return false, errors.New("no results")
+	}
+
+	status := true
+	values := resultMatrix[0].Values //TODO check all results instead of just the first one???
+	for i := range values {
+		status = status && (values[i].Value != 0)
+		if !status {
+			break
+		}
+	}
+
+	return status, nil
 }

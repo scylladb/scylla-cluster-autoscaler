@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -26,8 +27,8 @@ func init() {
 	_ = v1alpha1.AddToScheme(scheme)
 }
 
-func NewSingleDcSca(scaMeta *metav1.ObjectMeta, updateMode *v1alpha1.UpdateMode, targetClusterMeta *metav1.ObjectMeta,
-	dcName string, rackRecs []v1alpha1.RackRecommendations) *v1alpha1.ScyllaClusterAutoscaler {
+func NewSingleDcSca(scaMeta *metav1.ObjectMeta, updateMode *v1alpha1.UpdateMode,
+	targetClusterMeta *metav1.ObjectMeta) *v1alpha1.ScyllaClusterAutoscaler {
 	return &v1alpha1.ScyllaClusterAutoscaler{
 		ObjectMeta: *scaMeta,
 		Spec: v1alpha1.ScyllaClusterAutoscalerSpec{
@@ -36,17 +37,7 @@ func NewSingleDcSca(scaMeta *metav1.ObjectMeta, updateMode *v1alpha1.UpdateMode,
 				Name:      targetClusterMeta.Name,
 			},
 			UpdatePolicy: &v1alpha1.UpdatePolicy{
-				UpdateMode: updateMode,
-			},
-		},
-		Status: v1alpha1.ScyllaClusterAutoscalerStatus{
-			Recommendations: &v1alpha1.ScyllaClusterRecommendations{
-				DataCenterRecommendations: []v1alpha1.DataCenterRecommendations{
-					{
-						Name:                dcName,
-						RackRecommendations: rackRecs,
-					},
-				},
+				UpdateMode: *updateMode,
 			},
 		},
 	}
@@ -64,6 +55,38 @@ func NewSingleDcScyllaCluster(clusterMeta *metav1.ObjectMeta, dcName string, rac
 		},
 		Status: scyllav1.ClusterStatus{
 			Racks: racksStatus,
+		},
+	}
+}
+
+type TestRackRecommendations struct {
+	Name      string
+	Members   int32
+	Resources *corev1.ResourceRequirements
+}
+
+type TestRecommendations struct {
+	DatacenterName      string
+	RackRecommendations []TestRackRecommendations
+}
+
+func setScaRecommendations(sca *v1alpha1.ScyllaClusterAutoscaler, recommendations *TestRecommendations) {
+	var rackRecs []v1alpha1.RackRecommendations
+	for idx := range recommendations.RackRecommendations {
+		rackTestRec := &recommendations.RackRecommendations[idx]
+		rackRecs = append(rackRecs, v1alpha1.RackRecommendations{
+			Name:      rackTestRec.Name,
+			Members:   &rackTestRec.Members,
+			Resources: rackTestRec.Resources,
+		})
+	}
+
+	sca.Status.Recommendations = &v1alpha1.ScyllaClusterRecommendations{
+		DatacenterRecommendations: []v1alpha1.DatacenterRecommendations{
+			{
+				Name:                recommendations.DatacenterName,
+				RackRecommendations: rackRecs,
+			},
 		},
 	}
 }
@@ -96,10 +119,11 @@ func TestUpdater(t *testing.T) {
 		Namespace: "test-sca-ns",
 	}
 	tests := []struct {
-		Name           string
-		ScyllaCluster  *scyllav1.ScyllaCluster
-		Sca            *v1alpha1.ScyllaClusterAutoscaler
-		ExpectedStates []ExpectedStateSpec
+		Name            string
+		ScyllaCluster   *scyllav1.ScyllaCluster
+		Sca             *v1alpha1.ScyllaClusterAutoscaler
+		Recommendations *TestRecommendations
+		ExpectedStates  []ExpectedStateSpec
 	}{
 		{
 			Name: "applied recommendation",
@@ -110,10 +134,13 @@ func TestUpdater(t *testing.T) {
 				map[string]scyllav1.RackStatus{
 					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
-			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta, "test-dc",
-				[]v1alpha1.RackRecommendations{
-					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 2}},
-				}),
+			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta),
+			Recommendations: &TestRecommendations{
+				DatacenterName: "test-dc",
+				RackRecommendations: []TestRackRecommendations{
+					{Name: "test-rack-1", Members: 2},
+				},
+			},
 			ExpectedStates: []ExpectedStateSpec{
 				{Name: "test-rack-1", ExpectedMembersValue: 2},
 			},
@@ -127,10 +154,13 @@ func TestUpdater(t *testing.T) {
 				map[string]scyllav1.RackStatus{
 					"test-rack-1": {Members: 2, ReadyMembers: 1},
 				}),
-			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta, "test-dc",
-				[]v1alpha1.RackRecommendations{
-					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 3}},
-				}),
+			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta),
+			Recommendations: &TestRecommendations{
+				DatacenterName: "test-dc",
+				RackRecommendations: []TestRackRecommendations{
+					{Name: "test-rack-1", Members: 3},
+				},
+			},
 			ExpectedStates: []ExpectedStateSpec{
 				{Name: "test-rack-1", ExpectedMembersValue: 2},
 			},
@@ -144,10 +174,13 @@ func TestUpdater(t *testing.T) {
 				map[string]scyllav1.RackStatus{
 					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
-			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta, "test-dc",
-				[]v1alpha1.RackRecommendations{
-					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 2}},
-				}),
+			Sca: NewSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, basicTestClusterMeta),
+			Recommendations: &TestRecommendations{
+				DatacenterName: "test-dc",
+				RackRecommendations: []TestRackRecommendations{
+					{Name: "test-rack-1", Members: 2},
+				},
+			},
 			ExpectedStates: []ExpectedStateSpec{
 				{Name: "test-rack-1", ExpectedMembersValue: 2},
 			},
@@ -161,10 +194,13 @@ func TestUpdater(t *testing.T) {
 				map[string]scyllav1.RackStatus{
 					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
-			Sca: NewSingleDcSca(basicTestOffModeScaMeta, &offUpdateMode, basicTestClusterMeta, "test-dc",
-				[]v1alpha1.RackRecommendations{
-					{Name: "test-rack-1", Members: &v1alpha1.RecommendedRackMembers{Target: 2}},
-				}),
+			Sca: NewSingleDcSca(basicTestOffModeScaMeta, &offUpdateMode, basicTestClusterMeta),
+			Recommendations: &TestRecommendations{
+				DatacenterName: "test-dc",
+				RackRecommendations: []TestRackRecommendations{
+					{Name: "test-rack-1", Members: 1},
+				},
+			},
 			ExpectedStates: []ExpectedStateSpec{
 				{Name: "test-rack-1", ExpectedMembersValue: 1},
 			},
@@ -173,6 +209,7 @@ func TestUpdater(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
+			setScaRecommendations(test.Sca, test.Recommendations)
 			err := c.Create(ctx, test.ScyllaCluster)
 			require.NoError(t, err, "Couldn't create scylla cluster. Message: '%s'", err)
 			err = c.Create(ctx, test.Sca)

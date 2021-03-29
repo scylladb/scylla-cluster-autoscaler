@@ -37,7 +37,7 @@ func validateClusterChanges(ctx context.Context, logger log.Logger, cluster, old
 			continue
 		}
 
-		if *sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
+		if sca.Spec.UpdatePolicy.UpdateMode == v1alpha1.UpdateModeOff {
 			logger.Debug(ctx, "SCA has 'off' update mode, skipping", "SCA name", sca.Spec.TargetRef.Name)
 			continue
 		}

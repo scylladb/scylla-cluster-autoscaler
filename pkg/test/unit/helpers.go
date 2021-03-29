@@ -88,7 +88,7 @@ func NewDoubleScyllaAutoscalerList(firstName, firstNamespace, secondName, second
 						Namespace: firstNamespace,
 					},
 					UpdatePolicy: &v1alpha1.UpdatePolicy{
-						UpdateMode: &firstMode,
+						UpdateMode: firstMode,
 					},
 				},
 			},
@@ -99,7 +99,7 @@ func NewDoubleScyllaAutoscalerList(firstName, firstNamespace, secondName, second
 						Namespace: secondNamespace,
 					},
 					UpdatePolicy: &v1alpha1.UpdatePolicy{
-						UpdateMode: &secondMode,
+						UpdateMode: secondMode,
 					},
 				},
 			},
