@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/scylladb/go-log"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/recommender"
+	"github.com/scylladb/scylla-operator-autoscaler/pkg/recommender/metrics"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,11 +43,15 @@ func newRecommenderCmd(ctx context.Context, logger log.Logger) *cobra.Command {
 				return
 			}
 
-			r, err := recommender.New(ctx, c, logger, metricsSelectorSet, metricsDefaultStep)
+			pc, err := metrics.NewPrometheusClient(ctx, c, metricsSelectorSet)
 			if err != nil {
-				logger.Fatal(ctx, "create recommender", "error", err)
+				logger.Fatal(ctx, "create prometheus client", "error", err)
 				return
 			}
+
+			pp := metrics.NewPrometheusProvider(v1.NewAPI(*pc), logger, metricsDefaultStep)
+
+			r := recommender.New(c, pp, logger)
 
 			ticker := time.Tick(metricsInterval)
 			for range ticker {
