@@ -21,25 +21,21 @@ type prometheusProvider struct {
 }
 
 const (
+	svcPort           = 9090
 	maxQueriesInRange = 11000
 )
 
-func NewPrometheusProvider(ctx context.Context, c client.Client, logger log.Logger, selector map[string]string, defaultStep time.Duration) (Provider, error) {
-	promClient, err := discover(ctx, c, selector)
-	if err != nil {
-		return nil, err
-	}
-
+func NewPrometheusProvider(api v1.API, logger log.Logger, defaultStep time.Duration) Provider {
 	return &prometheusProvider{
 		provider: provider{
 			logger:      logger,
 			defaultStep: defaultStep,
 		},
-		api: v1.NewAPI(*promClient),
-	}, nil
+		api: api,
+	}
 }
 
-func discover(ctx context.Context, c client.Client, selector map[string]string) (*api.Client, error) {
+func NewPrometheusClient(ctx context.Context, c client.Client, selector map[string]string) (*api.Client, error) {
 	svcList := &corev1.ServiceList{}
 	err := c.List(ctx, svcList, &client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(selector),
@@ -54,7 +50,7 @@ func discover(ctx context.Context, c client.Client, selector map[string]string) 
 	svc := svcList.Items[0]
 	addr := (&url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s.%s.svc.cluster.local:9090", svc.Name, svc.Namespace),
+		Host:   fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, svcPort),
 	}).String()
 
 	promClient, err := api.NewClient(api.Config{Address: addr})
@@ -113,7 +109,7 @@ func (p *prometheusProvider) RangedQuery(ctx context.Context, expression string,
 	}
 
 	resultMatrix := result.(model.Matrix)
-	if resultMatrix.Len() == 0 {
+	if resultMatrix.Len() == 0 || len(resultMatrix[0].Values) == 0 {
 		return false, errors.New("no results")
 	}
 
