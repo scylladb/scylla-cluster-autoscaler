@@ -6,7 +6,7 @@ IMAGE_TAG ?= latest
 IMAGE_REPO ?= scyllazimnx
 IMAGE_PREFIX ?= scylla-operator-autoscaler-
 
-BINARIES := recommender updater
+BINARIES := recommender updater admission-controller
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS         ?= "crd:trivialVersions=true,allowDangerousTypes=true"

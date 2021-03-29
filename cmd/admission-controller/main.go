@@ -36,7 +36,7 @@ func main() {
 
 	var rootCmd = &cobra.Command{}
 	rootCmd.AddCommand(
-		newUpdaterCmd(ctx, logger),
+		newAdmissionControllerCmd(ctx, logger),
 	)
 	if err := rootCmd.Execute(); err != nil {
 		logger.Fatal(ctx, "root command", "error", err)

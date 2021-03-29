@@ -15,6 +15,7 @@ spec:
       labels:
         control-plane: recommender
     spec:
+      serviceAccountName: recommender-service-account
       containers:
         - command:
             - /usr/bin/recommender

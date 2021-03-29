@@ -6,3 +6,4 @@ kind: Kustomization
 images:
 - name: updater
   newName: scyllazimnx/scylla-operator-autoscaler-updater
+  newTag: latest

@@ -15,6 +15,7 @@ spec:
       labels:
         control-plane: updater
     spec:
+      serviceAccountName: updater-service-account
       containers:
         - command:
             - /usr/bin/updater

@@ -8,5 +8,5 @@ roleRef:
   name: system:recommender-role
 subjects:
   - kind: ServiceAccount
-    name: default
+    name: recommender-service-account
     namespace: system
