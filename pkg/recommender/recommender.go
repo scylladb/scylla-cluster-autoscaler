@@ -68,7 +68,7 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 }
 
 func (r *recommender) updateSCAStatus(ctx context.Context, sca *v1alpha1.ScyllaClusterAutoscaler, status v1alpha1.UpdateStatus, recommendations *v1alpha1.ScyllaClusterRecommendations) {
-	sca.Status.LastUpdated = metav1.NewTime(time.Now())
+	sca.Status.LastUpdated = metav1.NewTime(time.Now().UTC())
 	sca.Status.UpdateStatus = &status
 	sca.Status.Recommendations = recommendations
 
