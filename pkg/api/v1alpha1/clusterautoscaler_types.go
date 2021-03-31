@@ -67,6 +67,12 @@ type UpdatePolicy struct {
 	// +optional
 	// +kubebuilder:default:=Auto
 	UpdateMode UpdateMode `json:"updateMode"`
+
+	// +optional
+	RecommendationExpirationTime *metav1.Duration `json:"recommendationExpirationTime,omitempty"`
+
+	// +optional
+	UpdateCooldown *metav1.Duration `json:"updateCooldown,omitempty"`
 }
 
 // +kubebuilder:validation:Enum=Off;Auto
@@ -170,6 +176,9 @@ const (
 type ScyllaClusterAutoscalerStatus struct {
 	// +optional
 	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
+
+	// +optional
+	LastApplied metav1.Time `json:"lastApplied,omitempty"`
 
 	// +optional
 	UpdateStatus *UpdateStatus `json:"updateStatus,omitempty"`

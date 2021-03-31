@@ -1,6 +1,9 @@
 package util
 
 import (
+	"crypto/sha512"
+	"encoding/hex"
+	"encoding/json"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
@@ -56,4 +59,13 @@ func Int32ptr(v int32) *int32 {
 func DurationPtr(value int) *metav1.Duration {
 	return &metav1.Duration{Duration: time.Duration(value)}
 
+}
+
+func NewChecksum(obj interface{}) (string, error) {
+	marshalledObj, err := json.Marshal(obj)
+	if err != nil {
+		return "", err
+	}
+	newChecksum := sha512.Sum512(marshalledObj)
+	return hex.EncodeToString(newChecksum[:]), nil
 }
