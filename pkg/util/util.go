@@ -66,6 +66,6 @@ func NewChecksum(obj interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	newChecksum := sha512.Sum512(marshalledObj)
+	newChecksum := sha512.Sum512_224(marshalledObj)
 	return hex.EncodeToString(newChecksum[:]), nil
 }
