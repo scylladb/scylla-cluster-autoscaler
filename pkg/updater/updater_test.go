@@ -198,7 +198,7 @@ func TestUpdater(t *testing.T) {
 				map[string]scyllav1.RackStatus{
 					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
-			Sca: setExpTimeAndTimestamp(&testRecExpTime, testLastUpdatedSCATimestamp,
+			Sca: setExpTimeAndTimestamp(&testRecExpTime, &testLastUpdatedSCATimestamp,
 				newSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, &updateStatusOk, basicTestClusterMeta,
 					"test-dc",
 					[]v1alpha1.RackRecommendations{
@@ -217,7 +217,7 @@ func TestUpdater(t *testing.T) {
 				map[string]scyllav1.RackStatus{
 					"test-rack-1": {Members: 1, ReadyMembers: 1},
 				}),
-			Sca: setCooldownAndTimestamp(&testUpdateCooldown, testLastAppliedTimestamp,
+			Sca: setCooldownAndTimestamp(&testUpdateCooldown, &testLastAppliedTimestamp,
 				newSingleDcSca(basicTestAutoModeScaMeta, &autoUpdateMode, &updateStatusOk, basicTestClusterMeta,
 					"test-dc",
 					[]v1alpha1.RackRecommendations{
@@ -341,14 +341,14 @@ func setChecksumLabel(checksum string, cluster *scyllav1.ScyllaCluster) *scyllav
 	return cluster
 }
 
-func setExpTimeAndTimestamp(recExpTime *metav1.Duration, lastUpdated metav1.Time,
+func setExpTimeAndTimestamp(recExpTime *metav1.Duration, lastUpdated *metav1.Time,
 	sca *v1alpha1.ScyllaClusterAutoscaler) *v1alpha1.ScyllaClusterAutoscaler {
 	sca.Spec.UpdatePolicy.RecommendationExpirationTime = recExpTime
 	sca.Status.LastUpdated = lastUpdated
 	return sca
 }
 
-func setCooldownAndTimestamp(updateCooldown *metav1.Duration, lastApplied metav1.Time,
+func setCooldownAndTimestamp(updateCooldown *metav1.Duration, lastApplied *metav1.Time,
 	sca *v1alpha1.ScyllaClusterAutoscaler) *v1alpha1.ScyllaClusterAutoscaler {
 	sca.Spec.UpdatePolicy.UpdateCooldown = updateCooldown
 	sca.Status.LastApplied = lastApplied

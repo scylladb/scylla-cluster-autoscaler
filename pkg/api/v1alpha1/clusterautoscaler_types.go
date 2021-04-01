@@ -175,10 +175,10 @@ const (
 // ScyllaClusterAutoscalerStatus defines the observed state of ScyllaClusterAutoscaler
 type ScyllaClusterAutoscalerStatus struct {
 	// +optional
-	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
+	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
 
 	// +optional
-	LastApplied metav1.Time `json:"lastApplied,omitempty"`
+	LastApplied *metav1.Time `json:"lastApplied,omitempty"`
 
 	// +optional
 	UpdateStatus *UpdateStatus `json:"updateStatus,omitempty"`
