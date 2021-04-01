@@ -17,6 +17,7 @@ rules:
       - scyllaclusterautoscalers/status
     verbs:
       - get
+      - update
   - apiGroups:
       - scylla.scylladb.com
     resources:
@@ -25,4 +26,4 @@ rules:
       - get
       - list
       - watch
-
+      - update

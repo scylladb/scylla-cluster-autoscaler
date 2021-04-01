@@ -127,6 +127,10 @@ spec:
                 default:
                   updateMode: Auto
                 properties:
+                  recommendationExpirationTime:
+                    type: string
+                  updateCooldown:
+                    type: string
                   updateMode:
                     default: Auto
                     enum:
@@ -140,6 +144,9 @@ spec:
           status:
             description: ScyllaClusterAutoscalerStatus defines the observed state of ScyllaClusterAutoscaler
             properties:
+              lastApplied:
+                format: date-time
+                type: string
               lastUpdated:
                 format: date-time
                 type: string
