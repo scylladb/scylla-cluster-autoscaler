@@ -224,7 +224,8 @@ func (u *updater) updateScyllaCluster(ctx context.Context, cluster *scyllav1.Scy
 }
 
 func (u *updater) updateSCAStatus(ctx context.Context, sca *v1alpha1.ScyllaClusterAutoscaler) error {
-	sca.Status.LastApplied = metav1.NewTime(time.Now().UTC())
+	now := metav1.NewTime(time.Now().UTC())
+	sca.Status.LastApplied = &now
 	if err := u.client.Status().Update(ctx, sca); err != nil {
 		return err
 	}
