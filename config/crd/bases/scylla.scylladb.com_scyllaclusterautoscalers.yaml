@@ -19,7 +19,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ScyllaClusterAutoscaler is the Schema for the ScyllaClusterAutoscalers API
+        description: ScyllaClusterAutoscaler is the Schema for the ScyllaClusterAutoscalers API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
@@ -30,33 +30,41 @@ spec:
           metadata:
             type: object
           spec:
-            description: ScyllaClusterAutoscalerSpec defines the desired state of ScyllaClusterAutoscaler
+            description: ScyllaClusterAutoscalerSpec defines the desired state of ScyllaClusterAutoscaler.
             properties:
               scalingPolicy:
+                description: ScalingPolicy determines how each rack is supposed to be scaled. Every rack's policy is described separately. If a rack is not described, it will not undergo autoscaling.
                 properties:
                   datacenters:
                     items:
                       properties:
                         name:
+                          description: Name of a datacenter subject to autoscaling.
                           type: string
                         racks:
                           items:
                             properties:
                               memberPolicy:
+                                description: MemberPolicy describes the limitations on scaling the rack's members.
                                 properties:
                                   maxAllowed:
+                                    description: The highest allowed number of members. The number of rack's members will never go above this value. If not set, there is no maximum.
                                     format: int32
                                     type: integer
                                   minAllowed:
+                                    description: The lowest allowed number of members. The number of rack's members will never go below this value. If not set, there is no minimum.
                                     format: int32
                                     type: integer
                                 type: object
                               name:
+                                description: Name of a rack subject to autoscaling.
                                 type: string
                               resourcePolicy:
+                                description: ResourcePolicy determines the constraints on scaling the rack's resources.
                                 properties:
                                   controlledValues:
                                     default: RequestsAndLimits
+                                    description: Specifies which resource values should be scaled. Defaults to "RequestsAndLimits".
                                     enum:
                                     - Requests
                                     - RequestsAndLimits
@@ -65,36 +73,46 @@ spec:
                                     anyOf:
                                     - type: integer
                                     - type: string
+                                    description: The largest allowed resource quantities. Rack's resources will never go above these values. If not set, there is no maximum.
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   minAllowedCpu:
                                     anyOf:
                                     - type: integer
                                     - type: string
+                                    description: The smallest allowed resource quantities. Rack's resources will never go below these values. If not set, there is no minimum.
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                 type: object
                               rules:
+                                description: ScalingRules are a mechanism allowing for describing how a given rack is meant to be scaled. A single rule is essentially a tuple of a boolean query and the action to be invoked when query evaluates to true at a point or a certain period of time, depending on whether the query is ranged or not. A query is only checked at the time of evaluation. A ranged query is checked against a specified time range with a predetermined frequency and it only evaluates to true if the condition is met at all points in the time series.
                                 items:
                                   properties:
                                     expression:
+                                      description: A boolean query to the monitoring service.
                                       type: string
                                     factor:
+                                      description: ScalingFactor describes the factor by which the scaled value will be multiplied.
                                       type: number
                                     for:
+                                      description: Describes the duration of a ranged query. If not set, the query is not ranged.
                                       type: string
                                     mode:
+                                      description: ScalingMode specifies the direction of scaling.
                                       enum:
                                       - Horizontal
                                       - Vertical
                                       type: string
                                     name:
+                                      description: A unique name of the scaling rule.
                                       type: string
                                     priority:
+                                      description: Priorities are used to determine which rule is to be applied in case of multiple expressions evaluating to true at once. A rule with the lowest priority is chosen over the others. For triggered rules with equal priority, their top to bottom order of appearance decides.
                                       format: int32
                                       minimum: 0
                                       type: integer
                                     step:
+                                      description: Specifies the minimal time period between subsequent points in the time series. Only applies for ranged queries.
                                       type: string
                                   required:
                                   - expression
@@ -114,6 +132,7 @@ spec:
                     type: array
                 type: object
               targetRef:
+                description: TargetRef references a ScyllaCluster that is subject to autoscaling. The target is uniquely described by its name and namespace.
                 properties:
                   name:
                     type: string
@@ -126,13 +145,17 @@ spec:
               updatePolicy:
                 default:
                   updateMode: Auto
+                description: UpdatePolicy describes the rules and limitations of how the target is meant to be updated. If not specified, updateMode is set to "Auto".
                 properties:
                   recommendationExpirationTime:
+                    description: Describes how long the recommendations is valid for after having been saved in a status. If left blank, recommendations do not expire.
                     type: string
                   updateCooldown:
+                    description: Determines the length of a period after updating the ScyllaCluster during which no other recommendations should be applied. If left blank, there is no cooldown period.
                     type: string
                   updateMode:
                     default: Auto
+                    description: Determines whether the recommendations are applied to the target. Set to "Auto" by default.
                     enum:
                     - "Off"
                     - Auto
@@ -145,28 +168,34 @@ spec:
             description: ScyllaClusterAutoscalerStatus defines the observed state of ScyllaClusterAutoscaler
             properties:
               lastApplied:
+                description: LastApplied specifies the timestamp of last applied recommendations.
                 format: date-time
                 type: string
               lastUpdated:
+                description: LastUpdated specifies the timestamp of last saved recommendations.
                 format: date-time
                 type: string
               recommendations:
+                description: Latest recommendations for the target.
                 properties:
                   datacenterRecommendations:
                     items:
                       properties:
                         name:
+                          description: Name of a datacenter.
                           type: string
                         rackRecommendations:
                           items:
                             properties:
                               members:
+                                description: Recommended number of members.
                                 format: int32
                                 type: integer
                               name:
+                                description: Name of a rack.
                                 type: string
                               resources:
-                                description: ResourceRequirements describes the compute resource requirements.
+                                description: Recommended resources.
                                 properties:
                                   limits:
                                     additionalProperties:
@@ -197,6 +226,7 @@ spec:
                     type: array
                 type: object
               updateStatus:
+                description: UpdateStatus specifies the result of the latest attempt at preparing and saving recommendations.
                 enum:
                 - Ok
                 - TargetFetchFail
