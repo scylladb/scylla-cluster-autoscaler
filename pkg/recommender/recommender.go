@@ -2,6 +2,9 @@ package recommender
 
 import (
 	"context"
+	"math"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/scylladb/go-log"
 	"github.com/scylladb/scylla-operator-autoscaler/pkg/api/v1alpha1"
@@ -11,9 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"math"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 type Recommender interface {
@@ -50,7 +51,7 @@ func (r *recommender) RunOnce(ctx context.Context) error {
 		}
 
 		if !isScyllaClusterReady(sc) {
-			r.logger.Error(ctx, "target readiness check", "sca", sca.Name, "namespace", sca.Namespace)
+			r.logger.Debug(ctx, "target readiness check", "sca", sca.Name, "namespace", sca.Namespace)
 			r.updateSCAStatus(ctx, &sca, v1alpha1.UpdateStatusTargetNotReady, nil)
 			continue
 		}
