@@ -22,3 +22,6 @@ dist
 *.swo
 *~
 
+# additions for docs
+docs/_build
+docs/poetry.lock
