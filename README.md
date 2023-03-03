@@ -1,4 +1,10 @@
-# Scylla Cluster Autoscaler
+# [**DEPRECATED**] Scylla Cluster Autoscaler 
+
+Scylla Cluster Autoscaler was an experimental project and is **no longer supported or maintained**.
+
+---
+
+# Original purpose 
 
 [Scylla Cluster Autoscaler](https://github.com/scylladb/scylla-cluster-autoscaler) is an open source project which helps users of Scylla Open Source and Scylla Enterprise work with Scylla on Kubernetes (K8s).
 
